@@ -1,10 +1,11 @@
-exports.handler = async (event, context) => {
+// /.netlify/functions/ping
+exports.handler = async (event) => {
     if (event.httpMethod === 'OPTIONS') {
-        return { statusCode: 204, headers: corsHeaders(), body: '' };
+        return { statusCode: 204, headers: cors(), body: '' };
     }
     return {
         statusCode: 200,
-        headers: corsHeaders(),
+        headers: cors(),
         body: JSON.stringify({
             ok: true,
             method: event.httpMethod,
@@ -14,7 +15,7 @@ exports.handler = async (event, context) => {
     };
 };
 
-function corsHeaders() {
+function cors() {
     return {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET,OPTIONS',
