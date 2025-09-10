@@ -1,8 +1,11 @@
 [build]
   publish = "public"
-  functions = "netlify/functions"
 
-[[headers]]
-  for = "/*"
-  [headers.values]
-    Access-Control-Allow-Origin = "*"
+[functions]
+  directory = "netlify/functions"
+
+# Handy: map /api/* to functions
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
