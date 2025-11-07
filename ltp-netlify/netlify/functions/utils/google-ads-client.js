@@ -97,9 +97,12 @@ async function executeQuery(query, options = {}) {
     return new Promise((resolve, reject) => {
         const requestBody = JSON.stringify({ query });
 
+        // Remove dashes from customer ID if present
+        const cleanCustomerId = customerId.toString().replace(/-/g, '');
+
         const requestOptions = {
             hostname: 'googleads.googleapis.com',
-            path: `/v17/customers/${customerId}/googleAds:search`,
+            path: `/v18/customers/${cleanCustomerId}/googleAds:search`,
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${accessToken}`,

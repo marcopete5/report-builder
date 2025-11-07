@@ -85,27 +85,37 @@ async function debugAccessToken(config) {
  */
 async function debugApiCall(accessToken, config) {
     return new Promise((resolve, reject) => {
+        // Try simpler query first - just get accessible customers
         const query = `
             SELECT
-                customer.id,
-                customer.descriptive_name
-            FROM customer
-            LIMIT 1
+                customer_client.client_customer,
+                customer_client.level,
+                customer_client.manager,
+                customer_client.descriptive_name,
+                customer_client.currency_code,
+                customer_client.time_zone,
+                customer_client.id
+            FROM customer_client
+            WHERE customer_client.level <= 1
         `;
 
         const requestBody = JSON.stringify({ query });
+
+        // Remove dashes from customer ID if present
+        const cleanCustomerId = config.customerId.toString().replace(/-/g, '');
 
         console.log('API request config:', {
             hasAccessToken: !!accessToken,
             hasDeveloperToken: !!config.developerToken,
             hasCustomerId: !!config.customerId,
             customerId: config.customerId,
+            cleanCustomerId: cleanCustomerId,
             developerTokenStart: config.developerToken?.substring(0, 10) + '...'
         });
 
         const requestOptions = {
             hostname: 'googleads.googleapis.com',
-            path: `/v17/customers/${config.customerId}/googleAds:search`,
+            path: `/v18/customers/${cleanCustomerId}/googleAds:search`,
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${accessToken}`,
