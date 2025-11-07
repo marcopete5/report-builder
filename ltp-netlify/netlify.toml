@@ -9,3 +9,18 @@
   from = "/api/*"
   to = "/.netlify/functions/:splat"
   status = 200
+
+[[redirects]]
+  from = "/report/weekly"
+  to = "/.netlify/functions/report-weekly"
+  status = 200
+
+
+[[redirects]]
+  from = "/api/lesson-feedback"
+  to = "/.netlify/functions/lesson-feedback"
+  status = 200
+
+# Google Ads scheduled sync - runs daily at 2 AM UTC
+[functions."google-ads-sync"]
+  schedule = "0 2 * * *"

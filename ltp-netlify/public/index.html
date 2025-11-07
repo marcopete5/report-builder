@@ -1,14 +1,578 @@
 <!DOCTYPE html>
-<html>
-    <head>
-        <meta charset="utf-8" />
-        <title>vschool-reports</title>
-    </head>
-    <body>
-        <h1>vschool-reports</h1>
-        <p>
-            Function is at <code>/api/ping</code> or
-            <code>/.netlify/functions/ping</code>.
-        </p>
-    </body>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LTP Reports - Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="/navbar.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f5f7fa;
+            color: #2d3748;
+        }
+        .navbar {
+            background: white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            padding: 0 2rem;
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+            height: 64px;
+        }
+        .navbar-brand {
+            display: flex;
+            align-items: center;
+        }
+        .navbar-logo {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #2d3748;
+            text-decoration: none;
+        }
+        .navbar-logo:hover {
+            color: #4299e1;
+        }
+        .navbar-menu {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex: 1;
+        }
+        .navbar-item {
+            padding: 0.5rem 1rem;
+            color: #4a5568;
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 500;
+            border-radius: 0.375rem;
+            transition: all 0.2s;
+        }
+        .navbar-item:hover {
+            background: #f7fafc;
+            color: #4299e1;
+        }
+        .navbar-end {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .navbar-user {
+            color: #718096;
+            font-size: 0.875rem;
+        }
+        .role-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .role-superadmin {
+            background: #fbd38d;
+            color: #744210;
+        }
+        .role-admin {
+            background: #fed7d7;
+            color: #c53030;
+        }
+        .role-student {
+            background: #c6f6d5;
+            color: #276749;
+        }
+        .btn {
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            border: none;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: #4299e1;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #3182ce;
+        }
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #2d3748;
+        }
+        .btn-secondary:hover {
+            background: #cbd5e0;
+        }
+        @media (max-width: 768px) {
+            .navbar {
+                padding: 0 1rem;
+                gap: 1rem;
+                height: auto;
+                min-height: 64px;
+                flex-wrap: wrap;
+            }
+            .navbar-menu {
+                order: 3;
+                flex-basis: 100%;
+                padding: 0.5rem 0;
+                gap: 0.25rem;
+            }
+            .navbar-user {
+                display: none;
+            }
+        }
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+        }
+        .card {
+            background: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+        .card h2 {
+            margin-bottom: 1rem;
+            font-size: 1.25rem;
+        }
+        .loading {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: #718096;
+        }
+        .stat-grid {
+            display: grid;
+            gap: 12px;
+        }
+        .stat-row {
+            display: grid;
+            grid-template-columns: 180px 1fr;
+            padding: 8px 0;
+            border-bottom: 1px solid #f3f4f6;
+        }
+        .stat-row:last-child {
+            border-bottom: none;
+        }
+        .stat-label {
+            color: #718096;
+            font-size: 14px;
+        }
+        .stat-value {
+            color: #2d3748;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e2e8f0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 4px;
+        }
+        .progress-fill {
+            height: 100%;
+            background: #4299e1;
+            transition: width 0.3s ease;
+        }
+        .big-stat {
+            font-size: 32px;
+            font-weight: 700;
+            color: #4299e1;
+            margin: 8px 0;
+        }
+        .report-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+            margin-top: 1rem;
+        }
+        @media (min-width: 768px) {
+            .report-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+        .chart-container {
+            margin-top: 20px;
+            height: 300px;
+        }
+    </style>
+</head>
+<body>
+    <div id="navbar-container"></div>
+
+    <div class="container">
+        <div id="loading" class="loading">
+            <p>Loading...</p>
+        </div>
+
+        <div id="logged-in" style="display: none;">
+            <div class="card">
+                <h2>Welcome, <span id="user-name"></span>!</h2>
+                <div id="admin-content" style="display: none;">
+                    <p style="margin-bottom: 1.5rem;">You have admin access. Here are your available tools:</p>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                        <a href="/admin-users.html" style="display: block; padding: 1.5rem; background: #f7fafc; border: 1px solid #e2e8f0; border-radius: 0.5rem; text-decoration: none; color: inherit; transition: all 0.2s;" onmouseover="this.style.background='#edf2f7'; this.style.borderColor='#cbd5e0'" onmouseout="this.style.background='#f7fafc'; this.style.borderColor='#e2e8f0'">
+                            <div style="font-size: 2rem; margin-bottom: 0.5rem;">👥</div>
+                            <div style="font-weight: 600; font-size: 1.1rem; margin-bottom: 0.25rem;">Manage Users</div>
+                            <div style="color: #718096; font-size: 0.875rem;">Create, view, and delete user accounts</div>
+                        </a>
+                        <a href="/.netlify/functions/report-weekly?view=html" style="display: block; padding: 1.5rem; background: #f7fafc; border: 1px solid #e2e8f0; border-radius: 0.5rem; text-decoration: none; color: inherit; transition: all 0.2s;" onmouseover="this.style.background='#edf2f7'; this.style.borderColor='#cbd5e0'" onmouseout="this.style.background='#f7fafc'; this.style.borderColor='#e2e8f0'">
+                            <div style="font-size: 2rem; margin-bottom: 0.5rem;">📊</div>
+                            <div style="font-weight: 600; font-size: 1.1rem; margin-bottom: 0.25rem;">Weekly Report</div>
+                            <div style="color: #718096; font-size: 0.875rem;">View student activity and pace tracking</div>
+                        </a>
+                        <a href="/.netlify/functions/db-inspect?format=pretty" style="display: block; padding: 1.5rem; background: #f7fafc; border: 1px solid #e2e8f0; border-radius: 0.5rem; text-decoration: none; color: inherit; transition: all 0.2s;" onmouseover="this.style.background='#edf2f7'; this.style.borderColor='#cbd5e0'" onmouseout="this.style.background='#f7fafc'; this.style.borderColor='#e2e8f0'">
+                            <div style="font-size: 2rem; margin-bottom: 0.5rem;">🔍</div>
+                            <div style="font-weight: 600; font-size: 1.1rem; margin-bottom: 0.25rem;">Database Inspector</div>
+                            <div style="color: #718096; font-size: 0.875rem;">Inspect database collections and records</div>
+                        </a>
+                    </div>
+                    <div style="padding: 1rem; background: #edf2f7; border-radius: 0.5rem; border: 1px solid #cbd5e0;">
+                        <h3 style="margin: 0 0 0.5rem; font-size: 1rem;">Quick Actions</h3>
+                        <button class="btn btn-primary" onclick="syncStudents()">🔄 Sync Students from Entries</button>
+                    </div>
+                </div>
+                <div id="student-content" style="display: none;">
+                    <div id="student-report"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function checkAuth() {
+            const token = localStorage.getItem('auth_token');
+
+            if (!token) {
+                window.location.href = '/login.html';
+                return;
+            }
+
+            try {
+                const response = await fetch('/.netlify/functions/auth-me', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Not authenticated');
+                }
+
+                const data = await response.json();
+
+                if (!data.authenticated) {
+                    throw new Error('Not authenticated');
+                }
+
+                updateUI(data.user);
+            } catch (err) {
+                console.error('Auth check failed:', err);
+                localStorage.removeItem('auth_token');
+                localStorage.removeItem('user');
+                window.location.href = '/login.html';
+            }
+        }
+
+        function updateUI(user) {
+            const loading = document.getElementById('loading');
+            const loggedIn = document.getElementById('logged-in');
+            const userName = document.getElementById('user-name');
+            const adminContent = document.getElementById('admin-content');
+            const studentContent = document.getElementById('student-content');
+            const navbarContainer = document.getElementById('navbar-container');
+
+            // Render navbar
+            navbarContainer.innerHTML = getNavbarHTML(user);
+
+            loading.style.display = 'none';
+            loggedIn.style.display = 'block';
+
+            userName.textContent = user.email.split('@')[0];
+
+            if (user.role === 'superadmin' || user.role === 'admin') {
+                adminContent.style.display = 'block';
+                studentContent.style.display = 'none';
+            } else if (user.role === 'student') {
+                adminContent.style.display = 'none';
+                studentContent.style.display = 'block';
+                // Auto-load student report for students
+                loadMyReport();
+            }
+        }
+
+        async function handleLogout() {
+            const token = localStorage.getItem('auth_token');
+
+            await fetch('/.netlify/functions/auth-logout', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('user');
+            window.location.href = '/login.html';
+        }
+
+        async function syncStudents() {
+            if (!confirm('Sync missing students from lesson entries?')) return;
+
+            const token = localStorage.getItem('auth_token');
+
+            try {
+                const response = await fetch('/.netlify/functions/sync-students', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                const data = await response.json();
+                alert(`Sync completed!\nSynced: ${data.synced}\nFailed: ${data.failed}`);
+            } catch (err) {
+                alert('Error syncing students: ' + err.message);
+            }
+        }
+
+        async function loadMyReport() {
+            const reportDiv = document.getElementById('student-report');
+            const token = localStorage.getItem('auth_token');
+            reportDiv.innerHTML = '<p>Loading your comprehensive report...</p>';
+
+            try {
+                const response = await fetch('/.netlify/functions/my-report?days=30', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    reportDiv.innerHTML = `<p style="color: red;">Error: ${error.error}</p>`;
+                    return;
+                }
+
+                const data = await response.json();
+
+                // Format dates
+                const formatDate = (dateStr) => {
+                    if (!dateStr) return 'N/A';
+                    return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                };
+
+                // Format estimated end date (handles both Date objects and strings)
+                const formatEstimatedEndDate = (endDate) => {
+                    if (!endDate) return 'N/A';
+                    if (typeof endDate === 'string' && (endDate === 'Complete' || endDate === 'N/A')) {
+                        return endDate;
+                    }
+                    const date = typeof endDate === 'string' ? new Date(endDate) : endDate;
+                    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                };
+
+                // Build comprehensive report HTML
+                let html = `
+                    <h2 style="margin-bottom: 1.5rem; font-size: 1.75rem; color: #2d3748; font-weight: 600;">${data.student.studentName || 'Student'}</h2>
+
+                    <div class="report-grid">
+                        <div class="card">
+                            <h3 style="margin-bottom: 1rem; font-size: 1.1rem;">Student Information</h3>
+                            <div class="stat-grid">
+                                <div class="stat-row">
+                                    <div class="stat-label">Course:</div>
+                                    <div class="stat-value">${data.student.course || 'N/A'}</div>
+                                </div>
+                                <div class="stat-row">
+                                    <div class="stat-label">Institution:</div>
+                                    <div class="stat-value">${data.student.institution || 'N/A'}</div>
+                                </div>
+                                ${data.student.mentorName ? `
+                                <div class="stat-row">
+                                    <div class="stat-label">Mentor:</div>
+                                    <div class="stat-value">${data.student.mentorName}</div>
+                                </div>` : ''}
+                                <div class="stat-row">
+                                    <div class="stat-label">Course Start:</div>
+                                    <div class="stat-value">${formatDate(data.student.courseStartDate)}</div>
+                                </div>
+                                <div class="stat-row">
+                                    <div class="stat-label">Course End:</div>
+                                    <div class="stat-value">${formatDate(data.student.courseEndDate)}</div>
+                                </div>
+                                ${data.student.estimatedEndDate ? `
+                                <div class="stat-row">
+                                    <div class="stat-label">Estimated End:</div>
+                                    <div class="stat-value">
+                                        ${formatEstimatedEndDate(data.student.estimatedEndDate)}
+                                        ${data.student.daysLate && data.student.daysLate > 0 ? ` <span style="color: #ef4444;">(${data.student.daysLate} days late)</span>` : ''}
+                                        ${data.student.daysLate && data.student.daysLate < 0 ? ` <span style="color: #10b981;">(${Math.abs(data.student.daysLate)} days early)</span>` : ''}
+                                    </div>
+                                </div>` : ''}
+                            </div>
+                        </div>
+
+                        ${data.pace ? `
+                        <div class="card">
+                            <h3 style="margin-bottom: 1rem; font-size: 1.1rem;">Pace Tracker</h3>
+                            <div class="stat-grid">
+                                <div class="stat-row">
+                                    <div class="stat-label">Required Daily Pace</div>
+                                    <div class="stat-value">${data.pace.requiredDailyPace} pts/day</div>
+                                </div>
+                                <div class="stat-row">
+                                    <div class="stat-label">Actual Daily Pace</div>
+                                    <div class="stat-value">${data.pace.actualDailyPace} pts/day</div>
+                                </div>
+                                <div class="stat-row">
+                                    <div class="stat-label">Days Remaining</div>
+                                    <div class="stat-value">${data.pace.daysRemaining} days</div>
+                                </div>
+                                <div class="stat-row">
+                                    <div class="stat-label">Pace Status</div>
+                                    <div class="stat-value" style="color: ${data.pace.paceStatus === 'ahead' ? '#10b981' : data.pace.paceStatus === 'on-pace' ? '#3b82f6' : data.pace.paceStatus === 'behind' ? '#ef4444' : '#9ca3af'}; font-weight: 600; text-transform: capitalize;">
+                                        ${data.pace.paceStatus === 'dnf' ? 'DNF' : data.pace.paceStatus.replace('-', ' ')}
+                                    </div>
+                                </div>
+                                <div class="stat-row">
+                                    <div class="stat-label">Story Points Completed</div>
+                                    <div class="stat-value">${data.pace.completedStoryPoints} / ${data.pace.totalStoryPoints}</div>
+                                </div>
+                                <div class="stat-row">
+                                    <div class="stat-label">Story Points Remaining</div>
+                                    <div class="stat-value">${data.pace.remainingStoryPoints} pts</div>
+                                </div>
+                            </div>
+                        </div>` : ''}
+                    </div>
+
+                    <div class="report-grid" style="margin-top: 1.5rem;">
+                        <div class="card">
+                            <h3 style="margin-bottom: 1rem; font-size: 1.1rem;">Progress Breakdown</h3>
+                            <div style="margin-bottom: 16px;">
+                                <div style="font-size: 14px; color: #718096; margin-bottom: 8px;">Section Progress</div>
+                                <div style="font-size: 24px; font-weight: 600; color: #4299e1; margin-bottom: 8px;">
+                                    ${data.progress.sectionProgress.toFixed(1)}%
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width: ${data.progress.sectionProgress.toFixed(1)}%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div style="font-size: 14px; color: #718096; margin-bottom: 8px;">Level Progress</div>
+                                <div style="font-size: 24px; font-weight: 600; color: #4299e1; margin-bottom: 8px;">
+                                    ${data.progress.levelProgress.toFixed(1)}%
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width: ${data.progress.levelProgress.toFixed(1)}%"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <h3 style="margin-bottom: 1rem; font-size: 1.1rem;">Story Points Progress</h3>
+                            <div class="big-stat">${data.progress.completedStoryPoints} / ${data.progress.totalCoursePoints}</div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: ${data.progress.courseProgress.toFixed(1)}%"></div>
+                            </div>
+                            <div style="margin-top: 8px; color: #718096; font-size: 13px;">
+                                ${data.progress.courseProgress.toFixed(1)}% of total course completed
+                            </div>
+                            ${data.student.estimatedEndDate ? `
+                            <div style="margin-top: 20px;">
+                                <div class="stat-row">
+                                    <div class="stat-label">Estimated End Date</div>
+                                    <div class="stat-value">
+                                        ${formatEstimatedEndDate(data.student.estimatedEndDate)}
+                                        ${data.student.daysLate && data.student.daysLate > 0 ? ` <span style="color: #ef4444;">(${data.student.daysLate} days late)</span>` : ''}
+                                        ${data.student.daysLate && data.student.daysLate < 0 ? ` <span style="color: #10b981;">(${Math.abs(data.student.daysLate)} days early)</span>` : ''}
+                                    </div>
+                                </div>
+                            </div>` : ''}
+                        </div>
+                    </div>
+
+                    <div class="card" style="margin-top: 1.5rem;">
+                        <h3 style="margin-bottom: 1rem; font-size: 1.1rem;">Activity Timeline (Last 30 Days)</h3>
+                        <div class="chart-container">
+                            <canvas id="student-activity-chart"></canvas>
+                        </div>
+                    </div>
+                `;
+
+                reportDiv.innerHTML = html;
+
+                // Render chart with story points
+                renderActivityChart(data.dailySeries);
+
+            } catch (err) {
+                reportDiv.innerHTML = `<p style="color: red;">Error loading report: ${err.message}</p>`;
+            }
+        }
+
+        function renderActivityChart(dailySeries) {
+            const ctx = document.getElementById('student-activity-chart');
+            if (!ctx) return;
+
+            const labels = dailySeries.map(d => d.date);
+            const storyPoints = dailySeries.map(d => d.storyPoints || 0);
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Story Points',
+                        data: storyPoints,
+                        backgroundColor: 'rgba(66, 153, 225, 0.7)',
+                        borderColor: 'rgba(66, 153, 225, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                title: (items) => items[0].label,
+                                label: (item) => 'Story Points: ' + item.raw
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: {
+                                maxRotation: 45,
+                                minRotation: 45,
+                                autoSkip: true,
+                                maxTicksLimit: 15
+                            },
+                            grid: { display: false }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            ticks: { precision: 0 },
+                            grid: { color: 'rgba(0, 0, 0, 0.05)' },
+                            title: {
+                                display: true,
+                                text: 'Story Points'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Check authentication on page load
+        checkAuth();
+    </script>
+</body>
 </html>

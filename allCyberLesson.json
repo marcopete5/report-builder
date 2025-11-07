@@ -1,0 +1,686 @@
+[
+    {
+        "lessonId": "L1-LEARNING-001",
+        "title": "Learning to Learn",
+        "section": "Learning",
+        "level": 1,
+        "order": 1,
+        "storyPoints": 1,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L1-COMP-001",
+        "title": "CompTIA walkthrough",
+        "section": "Comp",
+        "level": 1,
+        "order": 1,
+        "storyPoints": 1,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L1-HARDWARE-001",
+        "title": "History of Computers and Tech",
+        "section": "Hardware",
+        "level": 1,
+        "order": 1,
+        "storyPoints": 1,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L1-HARDWARE-002",
+        "title": "Troubleshooting",
+        "section": "Hardware",
+        "level": 1,
+        "order": 2,
+        "storyPoints": 4,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L1-HARDWARE-003",
+        "title": "Hardware basics",
+        "section": "Hardware",
+        "level": 1,
+        "order": 3,
+        "storyPoints": 4,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L1-HARDWARE-004",
+        "title": "Storage types",
+        "section": "Hardware",
+        "level": 1,
+        "order": 4,
+        "storyPoints": 4,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L1-HARDWARE-005",
+        "title": "Boot Process",
+        "section": "Hardware",
+        "level": 1,
+        "order": 5,
+        "storyPoints": 5,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L1-HARDWARE-006",
+        "title": "Digital Data",
+        "section": "Hardware",
+        "level": 1,
+        "order": 6,
+        "storyPoints": 5,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L1-NETWORKING-001",
+        "title": "The Internet and Networking",
+        "section": "Networking",
+        "level": 1,
+        "order": 1,
+        "storyPoints": 1,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L1-NETWORKING-002",
+        "title": "Comparing Local Networking Hardware",
+        "section": "Networking",
+        "level": 1,
+        "order": 2,
+        "storyPoints": 4,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L1-NETWORKING-003",
+        "title": "What's the Internet?",
+        "section": "Networking",
+        "level": 1,
+        "order": 3,
+        "storyPoints": 1,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L1-NETWORKING-004",
+        "title": "Configuring Network Addressing and Internet Connections",
+        "section": "Networking",
+        "level": 1,
+        "order": 4,
+        "storyPoints": 4,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L1-CLOUD-001",
+        "title": "Cloud Computing",
+        "section": "Cloud",
+        "level": 1,
+        "order": 1,
+        "storyPoints": 10,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L1-MOBILE-001",
+        "title": "CompTIA Wrap Up",
+        "section": "Mobile",
+        "level": 1,
+        "order": 1,
+        "storyPoints": 15,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L1-EXAM-001",
+        "title": "Practice and Cert Exams",
+        "section": "Exam",
+        "level": 1,
+        "order": 1,
+        "storyPoints": 25,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L2-SOFTWARE-001",
+        "title": "Software Basics and Operating Systems",
+        "section": "Software",
+        "level": 2,
+        "order": 1,
+        "storyPoints": 5,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L2-SOFTWARE-002",
+        "title": "Configuring Windows",
+        "section": "Software",
+        "level": 2,
+        "order": 2,
+        "storyPoints": 5,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L2-SOFTWARE-003",
+        "title": "Managing Windows",
+        "section": "Software",
+        "level": 2,
+        "order": 3,
+        "storyPoints": 5,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L2-SOFTWARE-004",
+        "title": "Supporting Windows",
+        "section": "Software",
+        "level": 2,
+        "order": 4,
+        "storyPoints": 5,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L2-SOFTWARE-005",
+        "title": "Securing Windows",
+        "section": "Software",
+        "level": 2,
+        "order": 5,
+        "storyPoints": 5,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L2-SOFTWARE-006",
+        "title": "Installing Operating Systems",
+        "section": "Software",
+        "level": 2,
+        "order": 6,
+        "storyPoints": 5,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L2-CYBERSEC-001",
+        "title": "Supporting Other OS",
+        "section": "Cybersec",
+        "level": 2,
+        "order": 1,
+        "storyPoints": 5,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L2-CYBERSEC-002",
+        "title": "Fundamentals",
+        "section": "Cybersec",
+        "level": 2,
+        "order": 2,
+        "storyPoints": 1,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L2-CYBERSEC-003",
+        "title": "Configuring SOHO Network Security",
+        "section": "Cybersec",
+        "level": 2,
+        "order": 3,
+        "storyPoints": 4,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L2-CYBERSEC-004",
+        "title": "Managing Security Settings",
+        "section": "Cybersec",
+        "level": 2,
+        "order": 4,
+        "storyPoints": 5,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L2-CYBERSEC-005",
+        "title": "Supporting Mobile Software",
+        "section": "Cybersec",
+        "level": 2,
+        "order": 5,
+        "storyPoints": 5,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L2-CYBERSEC-006",
+        "title": "Using Data Security",
+        "section": "Cybersec",
+        "level": 2,
+        "order": 6,
+        "storyPoints": 5,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L2-COMPTIA-CORE2-SCRIPT-001",
+        "title": "Scripting and Operational Procedures",
+        "section": "Comptia-Core2",
+        "level": 2,
+        "order": 1,
+        "storyPoints": 1,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L2-COMPTIA-CORE2-SCRIPT-002",
+        "title": "Implementing Operational Procedures",
+        "section": "Comptia-Core2",
+        "level": 2,
+        "order": 2,
+        "storyPoints": 4,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L2-EXAM-001",
+        "title": "Practice and Cert Exams",
+        "section": "Exam",
+        "level": 2,
+        "order": 1,
+        "storyPoints": 25,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L3-NET-001",
+        "title": "Introduction to Networking",
+        "section": "Net",
+        "level": 3,
+        "order": 1,
+        "storyPoints": 3,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L3-NET-002",
+        "title": "OSI Model",
+        "section": "Net",
+        "level": 3,
+        "order": 2,
+        "storyPoints": 7,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L3-NET-003",
+        "title": "Wireless Networking",
+        "section": "Net",
+        "level": 3,
+        "order": 3,
+        "storyPoints": 10,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L3-NET-004",
+        "title": "TCP | Subnetting",
+        "section": "Net",
+        "level": 3,
+        "order": 4,
+        "storyPoints": 15,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L3-NET-005",
+        "title": "Cloud Computing",
+        "section": "Net",
+        "level": 3,
+        "order": 5,
+        "storyPoints": 5,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L3-NET-006",
+        "title": "Cloud Deployment Models and Methods",
+        "section": "Net",
+        "level": 3,
+        "order": 6,
+        "storyPoints": 5,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L3-OPS-004",
+        "title": "Disaster Recovery",
+        "section": "Ops",
+        "level": 3,
+        "order": 4,
+        "storyPoints": 5,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L4-COMPTIA-NETWORK-001",
+        "title": "Explaining Network Topology",
+        "section": "Comptia-Network",
+        "level": 4,
+        "order": 1,
+        "storyPoints": 5,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L4-COMPTIA-NETWORK-002",
+        "title": "Supporting Cabling and Physical Installations",
+        "section": "Comptia-Network",
+        "level": 4,
+        "order": 2,
+        "storyPoints": 5,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L4-COMPTIA-NETWORK-003",
+        "title": "Configuring Interfaces and Switches",
+        "section": "Comptia-Network",
+        "level": 4,
+        "order": 3,
+        "storyPoints": 5,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L4-COMPTIA-NETWORK-004",
+        "title": "Configuring Network Addressing",
+        "section": "Comptia-Network",
+        "level": 4,
+        "order": 4,
+        "storyPoints": 5,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L4-NET-005",
+        "title": "Configuring Routing and Advanced Switching",
+        "section": "Net",
+        "level": 4,
+        "order": 5,
+        "storyPoints": 5,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L4-NET-006",
+        "title": "Implementing Network Services",
+        "section": "Net",
+        "level": 4,
+        "order": 6,
+        "storyPoints": 5,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L4-NET-007",
+        "title": "Explaining Application Services",
+        "section": "Net",
+        "level": 4,
+        "order": 7,
+        "storyPoints": 5,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L4-NET-008",
+        "title": "Supporting Network Management",
+        "section": "Net",
+        "level": 4,
+        "order": 8,
+        "storyPoints": 5,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L4-NET-009",
+        "title": "Explaining Network Security Concepts",
+        "section": "Net",
+        "level": 4,
+        "order": 9,
+        "storyPoints": 5,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L4-NET-010",
+        "title": "Applying Network Security Features",
+        "section": "Net",
+        "level": 4,
+        "order": 10,
+        "storyPoints": 5,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L4-NET-011",
+        "title": "Supporting Network Security Design",
+        "section": "Net",
+        "level": 4,
+        "order": 11,
+        "storyPoints": 5,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L4-NET-012",
+        "title": "Configuring Wireless Networks",
+        "section": "Net",
+        "level": 4,
+        "order": 12,
+        "storyPoints": 5,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L4-NET-013",
+        "title": "Comparing Remote Access Methods",
+        "section": "Net",
+        "level": 4,
+        "order": 13,
+        "storyPoints": 5,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L4-NET-014",
+        "title": "Summarizing Cloud Concepts",
+        "section": "Net",
+        "level": 4,
+        "order": 14,
+        "storyPoints": 5,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L4-EXAM-001",
+        "title": "Practice and Cert Exams",
+        "section": "Exam",
+        "level": 4,
+        "order": 1,
+        "storyPoints": 25,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L5-CS-001",
+        "title": "Introduction to the Cybersecurity Landscape",
+        "section": "Cs",
+        "level": 5,
+        "order": 1,
+        "storyPoints": 5,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L5-CS-002",
+        "title": "Public Key Infrastructure",
+        "section": "Cs",
+        "level": 5,
+        "order": 2,
+        "storyPoints": 5,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L5-NETSEC-001",
+        "title": "Security Architecture and Security Zones",
+        "section": "Netsec",
+        "level": 5,
+        "order": 1,
+        "storyPoints": 10,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L5-THREAT-001",
+        "title": "Understanding Cybersecurity Threats",
+        "section": "Threat",
+        "level": 5,
+        "order": 1,
+        "storyPoints": 5,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L5-RISK-001",
+        "title": "Risk Management",
+        "section": "Risk",
+        "level": 5,
+        "order": 1,
+        "storyPoints": 5,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L5-RISK-002",
+        "title": "Business Continuity",
+        "section": "Risk",
+        "level": 5,
+        "order": 2,
+        "storyPoints": 5,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L5-CYBER-EMERGING",
+        "title": "Emerging Technologies",
+        "section": "Cyber",
+        "level": 5,
+        "order": 1,
+        "storyPoints": 10,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L6-COMPTIA-SEC-001",
+        "title": "Summarize Fundamental Security Concepts",
+        "section": "Comptia-Sec",
+        "level": 6,
+        "order": 1,
+        "storyPoints": 5,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L6-COMPTIA-SEC-002",
+        "title": "Compare Threat Types",
+        "section": "Comptia-Sec",
+        "level": 6,
+        "order": 2,
+        "storyPoints": 5,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L6-COMPTIA-SEC-003",
+        "title": "Explain Cryptographic Solutions",
+        "section": "Comptia-Sec",
+        "level": 6,
+        "order": 3,
+        "storyPoints": 5,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L6-COMPTIA-SEC-004",
+        "title": "Implement Identity and Access Management",
+        "section": "Comptia-Sec",
+        "level": 6,
+        "order": 4,
+        "storyPoints": 5,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L6-COMPTIA-SEC-005",
+        "title": "Secure Enterprise Network Architecture",
+        "section": "Comptia-Sec",
+        "level": 6,
+        "order": 5,
+        "storyPoints": 5,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L6-COMPTIA-SEC-006",
+        "title": "Secure Cloud Network Architecture",
+        "section": "Comptia-Sec",
+        "level": 6,
+        "order": 6,
+        "storyPoints": 5,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L6-COMPTIA-SEC-007",
+        "title": "Explain Resiliency and Site Security Concepts",
+        "section": "Comptia-Sec",
+        "level": 6,
+        "order": 7,
+        "storyPoints": 5,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L6-COMPTIA-SEC-008",
+        "title": "Explain Vulnerability Management",
+        "section": "Comptia-Sec",
+        "level": 6,
+        "order": 8,
+        "storyPoints": 5,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L6-COMPTIA-SEC-009",
+        "title": "Evaluate Network Security Capabilities",
+        "section": "Comptia-Sec",
+        "level": 6,
+        "order": 9,
+        "storyPoints": 5,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L6-COMPTIA-SEC-010",
+        "title": "Assess Endpoint Security Capabilities",
+        "section": "Comptia-Sec",
+        "level": 6,
+        "order": 10,
+        "storyPoints": 5,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L6-COMPTIA-SEC-011",
+        "title": "Enhance Application Security Capabilities",
+        "section": "Comptia-Sec",
+        "level": 6,
+        "order": 11,
+        "storyPoints": 5,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L6-COMPTIA-SEC-012",
+        "title": "Explain Incident Response and Monitoring Concepts",
+        "section": "Comptia-Sec",
+        "level": 6,
+        "order": 12,
+        "storyPoints": 5,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L6-COMPTIA-SEC-013",
+        "title": "Analyze Indicators of Malicious Activity",
+        "section": "Comptia-Sec",
+        "level": 6,
+        "order": 13,
+        "storyPoints": 5,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L6-COMPTIA-SEC-014",
+        "title": "Summarize Security Governance Concepts",
+        "section": "Comptia-Sec",
+        "level": 6,
+        "order": 14,
+        "storyPoints": 5,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L6-COMPTIA-SEC-015",
+        "title": "Explain Risk Management Processes",
+        "section": "Comptia-Sec",
+        "level": 6,
+        "order": 15,
+        "storyPoints": 5,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L6-COMPTIA-SEC-016",
+        "title": "Summarize Data Protection and Compliance Concepts",
+        "section": "Comptia-Sec",
+        "level": 6,
+        "order": 16,
+        "storyPoints": 5,
+        "courseId": "Cybersecurity"
+    },
+    {
+        "lessonId": "L6-EXAM-001",
+        "title": "Practice and Cert Exams",
+        "section": "Exam",
+        "level": 6,
+        "order": 1,
+        "storyPoints": 25,
+        "courseId": "Cybersecurity"
+    }
+]

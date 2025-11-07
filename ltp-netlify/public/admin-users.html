@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Management - LTP Reports</title>
+    <script src="/navbar.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f5f7fa;
+            color: #2d3748;
+        }
+        .navbar {
+            background: white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            padding: 0 2rem;
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+            height: 64px;
+        }
+        .navbar-brand {
+            display: flex;
+            align-items: center;
+        }
+        .navbar-logo {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #2d3748;
+            text-decoration: none;
+        }
+        .navbar-logo:hover {
+            color: #4299e1;
+        }
+        .navbar-menu {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex: 1;
+        }
+        .navbar-item {
+            padding: 0.5rem 1rem;
+            color: #4a5568;
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 500;
+            border-radius: 0.375rem;
+            transition: all 0.2s;
+        }
+        .navbar-item:hover {
+            background: #f7fafc;
+            color: #4299e1;
+        }
+        .navbar-end {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .navbar-user {
+            color: #718096;
+            font-size: 0.875rem;
+        }
+        .role-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .role-superadmin {
+            background: #fbd38d;
+            color: #744210;
+        }
+        .role-admin {
+            background: #fed7d7;
+            color: #c53030;
+        }
+        .role-student {
+            background: #c6f6d5;
+            color: #276749;
+        }
+        @media (max-width: 768px) {
+            .navbar {
+                padding: 0 1rem;
+                gap: 1rem;
+                height: auto;
+                min-height: 64px;
+                flex-wrap: wrap;
+            }
+            .navbar-menu {
+                order: 3;
+                flex-basis: 100%;
+                padding: 0.5rem 0;
+                gap: 0.25rem;
+            }
+            .navbar-user {
+                display: none;
+            }
+        }
+        .btn {
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            border: none;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: #4299e1;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #3182ce;
+        }
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #2d3748;
+        }
+        .btn-secondary:hover {
+            background: #cbd5e0;
+        }
+        .btn-danger {
+            background: #f56565;
+            color: white;
+        }
+        .btn-danger:hover {
+            background: #e53e3e;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+        }
+        .card {
+            background: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+        .card h2 {
+            margin-bottom: 1rem;
+            font-size: 1.25rem;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        th {
+            background: #f7fafc;
+            font-weight: 600;
+            font-size: 0.875rem;
+            color: #4a5568;
+        }
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .badge-superadmin {
+            background: #fbd38d;
+            color: #744210;
+        }
+        .badge-admin {
+            background: #fed7d7;
+            color: #c53030;
+        }
+        .badge-student {
+            background: #c6f6d5;
+            color: #276749;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            align-items: center;
+            justify-content: center;
+        }
+        .modal.show {
+            display: flex;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 0.5rem;
+            padding: 2rem;
+            max-width: 500px;
+            width: 90%;
+        }
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            font-size: 0.875rem;
+        }
+        input, select {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.375rem;
+        }
+        .error {
+            background: #fed7d7;
+            color: #c53030;
+            padding: 0.75rem;
+            border-radius: 0.375rem;
+            margin-bottom: 1rem;
+            font-size: 0.875rem;
+        }
+        .success {
+            background: #c6f6d5;
+            color: #276749;
+            padding: 0.75rem;
+            border-radius: 0.375rem;
+            margin-bottom: 1rem;
+            font-size: 0.875rem;
+        }
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #718096;
+        }
+    </style>
+</head>
+<body>
+    <div id="navbar-container"></div>
+
+    <div class="container">
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h2>Users</h2>
+                <button class="btn btn-primary" onclick="showAddUserModal()">+ Add User</button>
+            </div>
+
+            <div id="message"></div>
+
+            <div id="loading" class="loading">Loading users...</div>
+
+            <table id="users-table" style="display: none;">
+                <thead>
+                    <tr>
+                        <th>Email</th>
+                        <th>Role</th>
+                        <th>Student ID</th>
+                        <th>Created</th>
+                        <th>Last Login</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="users-tbody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Add User Modal -->
+    <div id="add-user-modal" class="modal">
+        <div class="modal-content">
+            <h2 style="margin-bottom: 1.5rem;">Add New User</h2>
+
+            <div id="modal-error"></div>
+
+            <form id="add-user-form">
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" name="email" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" required minlength="8">
+                    <small style="color: #718096;">Minimum 8 characters</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="role">Role</label>
+                    <select id="role" name="role" required onchange="toggleStudentId()">
+                        <option value="">Select role...</option>
+                        <option value="superadmin" id="superadmin-option" style="display: none;">Superadmin (Full Access)</option>
+                        <option value="admin">Admin</option>
+                        <option value="student">Student</option>
+                    </select>
+                </div>
+
+                <div class="form-group" id="student-id-group" style="display: none;">
+                    <label for="studentId">Student ID (from Airtable)</label>
+                    <input type="text" id="studentId" name="studentId" placeholder="recXXXXXXXXXXXXXX">
+                    <small style="color: #718096;">Required for student users</small>
+                </div>
+
+                <div style="display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 1.5rem;">
+                    <button type="button" class="btn btn-secondary" onclick="closeAddUserModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create User</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Authentication check - redirect if not logged in
+        (function checkAuth() {
+            const token = localStorage.getItem('auth_token');
+            if (!token) {
+                window.location.href = '/login.html';
+                return;
+            }
+        })();
+
+        let users = [];
+        let currentUser = null;
+
+        async function loadUsers() {
+            const token = localStorage.getItem('auth_token');
+
+            try {
+                // Get current user info
+                const meResponse = await fetch('/.netlify/functions/auth-me', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!meResponse.ok) {
+                    // Token is invalid, redirect to login
+                    localStorage.removeItem('auth_token');
+                    localStorage.removeItem('user');
+                    window.location.href = '/login.html';
+                    return;
+                }
+
+                const meData = await meResponse.json();
+
+                if (!meData.authenticated) {
+                    // Not authenticated, redirect to login
+                    localStorage.removeItem('auth_token');
+                    localStorage.removeItem('user');
+                    window.location.href = '/login.html';
+                    return;
+                }
+
+                currentUser = meData.user;
+
+                // Render navbar
+                document.getElementById('navbar-container').innerHTML = getNavbarHTML(currentUser);
+
+                // Show superadmin option if user is superadmin
+                if (currentUser.role === 'superadmin') {
+                    document.getElementById('superadmin-option').style.display = 'block';
+                }
+
+                // Get users list
+                const response = await fetch('/.netlify/functions/users-list', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to load users');
+                }
+
+                const data = await response.json();
+                users = data.users;
+
+                renderUsers();
+            } catch (err) {
+                document.getElementById('loading').innerHTML = `<div class="error">Error loading users: ${err.message}</div>`;
+            }
+        }
+
+        function renderUsers() {
+            const loading = document.getElementById('loading');
+            const table = document.getElementById('users-table');
+            const tbody = document.getElementById('users-tbody');
+
+            loading.style.display = 'none';
+            table.style.display = 'table';
+
+            tbody.innerHTML = users.map(user => `
+                <tr>
+                    <td>${user.email}</td>
+                    <td><span class="badge badge-${user.role}">${user.role}</span></td>
+                    <td>${user.studentId || '—'}</td>
+                    <td>${new Date(user.createdAt).toLocaleDateString()}</td>
+                    <td>${user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never'}</td>
+                    <td>
+                        <button class="btn btn-danger" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;" onclick="deleteUser('${user.id}', '${user.email}')">Delete</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function showAddUserModal() {
+            document.getElementById('add-user-modal').classList.add('show');
+        }
+
+        function closeAddUserModal() {
+            document.getElementById('add-user-modal').classList.remove('show');
+            document.getElementById('add-user-form').reset();
+            document.getElementById('modal-error').innerHTML = '';
+            document.getElementById('student-id-group').style.display = 'none';
+        }
+
+        function toggleStudentId() {
+            const role = document.getElementById('role').value;
+            const studentIdGroup = document.getElementById('student-id-group');
+            const studentIdInput = document.getElementById('studentId');
+
+            if (role === 'student') {
+                studentIdGroup.style.display = 'block';
+                studentIdInput.required = true;
+            } else {
+                studentIdGroup.style.display = 'none';
+                studentIdInput.required = false;
+            }
+        }
+
+        document.getElementById('add-user-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const token = localStorage.getItem('auth_token');
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const role = document.getElementById('role').value;
+            const studentId = document.getElementById('studentId').value || null;
+
+            const modalError = document.getElementById('modal-error');
+            modalError.innerHTML = '';
+
+            try {
+                const response = await fetch('/.netlify/functions/users-create', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email, password, role, studentId })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to create user');
+                }
+
+                closeAddUserModal();
+                showMessage('User created successfully!', 'success');
+                loadUsers();
+            } catch (err) {
+                modalError.innerHTML = `<div class="error">${err.message}</div>`;
+            }
+        });
+
+        async function deleteUser(userId, email) {
+            if (!confirm(`Are you sure you want to delete user: ${email}?`)) {
+                return;
+            }
+
+            const token = localStorage.getItem('auth_token');
+
+            try {
+                const response = await fetch(`/.netlify/functions/users-delete?id=${userId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to delete user');
+                }
+
+                showMessage('User deleted successfully!', 'success');
+                loadUsers();
+            } catch (err) {
+                showMessage('Error deleting user: ' + err.message, 'error');
+            }
+        }
+
+        function showMessage(text, type) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.innerHTML = `<div class="${type}">${text}</div>`;
+            setTimeout(() => {
+                messageDiv.innerHTML = '';
+            }, 5000);
+        }
+
+        async function handleLogout() {
+            const token = localStorage.getItem('auth_token');
+            await fetch('/.netlify/functions/auth-logout', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('user');
+            window.location.href = '/login.html';
+        }
+
+        // Load users on page load
+        loadUsers();
+
+        // Close modal on background click
+        document.getElementById('add-user-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'add-user-modal') {
+                closeAddUserModal();
+            }
+        });
+    </script>
+</body>
+</html>

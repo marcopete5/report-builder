@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboards - LTP Reports</title>
+    <script src="/navbar.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f5f7fa;
+            color: #2d3748;
+        }
+        .navbar {
+            background: white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            padding: 0 2rem;
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+            height: 64px;
+        }
+        .navbar-brand {
+            display: flex;
+            align-items: center;
+        }
+        .navbar-logo {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #2d3748;
+            text-decoration: none;
+        }
+        .navbar-logo:hover {
+            color: #4299e1;
+        }
+        .navbar-menu {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex: 1;
+        }
+        .navbar-item {
+            padding: 0.5rem 1rem;
+            color: #4a5568;
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 500;
+            border-radius: 0.375rem;
+            transition: all 0.2s;
+        }
+        .navbar-item:hover {
+            background: #f7fafc;
+            color: #4299e1;
+        }
+        .navbar-end {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .navbar-user {
+            color: #718096;
+            font-size: 0.875rem;
+        }
+        .role-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .role-superadmin {
+            background: #fbd38d;
+            color: #744210;
+        }
+        .role-admin {
+            background: #fed7d7;
+            color: #c53030;
+        }
+        .role-student {
+            background: #c6f6d5;
+            color: #276749;
+        }
+        .btn {
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            border: none;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #2d3748;
+        }
+        .btn-secondary:hover {
+            background: #cbd5e0;
+        }
+        @media (max-width: 768px) {
+            .navbar {
+                padding: 0 1rem;
+                gap: 1rem;
+                height: auto;
+                min-height: 64px;
+                flex-wrap: wrap;
+            }
+            .navbar-menu {
+                order: 3;
+                flex-basis: 100%;
+                padding: 0.5rem 0;
+                gap: 0.25rem;
+            }
+            .navbar-user {
+                display: none;
+            }
+        }
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+        }
+        .page-header {
+            margin-bottom: 2rem;
+        }
+        .page-header h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+        .page-header p {
+            color: #718096;
+        }
+        .departments {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+        .department {
+            background: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            padding: 1.5rem;
+        }
+        .department-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        .department-icon {
+            font-size: 2rem;
+        }
+        .department-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1rem;
+        }
+        .dashboard-card {
+            display: block;
+            padding: 1.5rem;
+            background: #f7fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.5rem;
+            text-decoration: none;
+            color: inherit;
+            transition: all 0.2s;
+        }
+        .dashboard-card:hover {
+            background: #edf2f7;
+            border-color: #cbd5e0;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .dashboard-card-icon {
+            font-size: 2rem;
+            margin-bottom: 0.75rem;
+        }
+        .dashboard-card-title {
+            font-weight: 600;
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+        }
+        .dashboard-card-description {
+            color: #718096;
+            font-size: 0.875rem;
+            line-height: 1.5;
+        }
+        .loading {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: #718096;
+        }
+    </style>
+</head>
+<body>
+    <div id="navbar-container"></div>
+
+    <div class="container">
+        <div id="loading" class="loading">
+            <p>Loading...</p>
+        </div>
+
+        <div id="content" style="display: none;">
+            <div class="page-header">
+                <h1>Dashboards</h1>
+                <p>Select a dashboard to view department-specific insights and metrics</p>
+            </div>
+
+            <div class="departments">
+                <!-- Marketing Department -->
+                <div class="department">
+                    <div class="department-header">
+                        <div class="department-icon">📢</div>
+                        <h2 class="department-title">Marketing</h2>
+                    </div>
+                    <div class="dashboard-grid">
+                        <a href="/dashboard-ad-spend.html" class="dashboard-card">
+                            <div class="dashboard-card-icon">💰</div>
+                            <div class="dashboard-card-title">Ad Spend Dashboard</div>
+                            <div class="dashboard-card-description">Track advertising spend, ROI, and campaign performance metrics across all channels</div>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- More departments can be added here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function checkAuth() {
+            const token = localStorage.getItem('auth_token');
+
+            if (!token) {
+                window.location.href = '/login.html';
+                return;
+            }
+
+            try {
+                const response = await fetch('/.netlify/functions/auth-me', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Not authenticated');
+                }
+
+                const data = await response.json();
+
+                if (!data.authenticated) {
+                    throw new Error('Not authenticated');
+                }
+
+                // Check if user is admin
+                if (data.user.role !== 'admin' && data.user.role !== 'superadmin') {
+                    alert('Access denied. Admin privileges required.');
+                    window.location.href = '/';
+                    return;
+                }
+
+                updateUI(data.user);
+            } catch (err) {
+                console.error('Auth check failed:', err);
+                localStorage.removeItem('auth_token');
+                localStorage.removeItem('user');
+                window.location.href = '/login.html';
+            }
+        }
+
+        function updateUI(user) {
+            const loading = document.getElementById('loading');
+            const content = document.getElementById('content');
+            const navbarContainer = document.getElementById('navbar-container');
+
+            // Render navbar
+            navbarContainer.innerHTML = getNavbarHTML(user);
+
+            loading.style.display = 'none';
+            content.style.display = 'block';
+        }
+
+        async function handleLogout() {
+            const token = localStorage.getItem('auth_token');
+
+            await fetch('/.netlify/functions/auth-logout', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('user');
+            window.location.href = '/login.html';
+        }
+
+        // Check authentication on page load
+        checkAuth();
+    </script>
+</body>
+</html>

@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Millersville Ads Overview - Marketing Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="/navbar.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #fafbfc;
+            color: #1a1a1a;
+        }
+
+        /* Navbar styles */
+        .navbar {
+            background: white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            padding: 0 2rem;
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+            height: 64px;
+        }
+        .navbar-brand { display: flex; align-items: center; }
+        .navbar-logo { font-size: 1.5rem; font-weight: 600; color: #2d3748; text-decoration: none; }
+        .navbar-logo:hover { color: #4299e1; }
+        .navbar-menu { display: flex; align-items: center; gap: 0.5rem; flex: 1; }
+        .navbar-item { padding: 0.5rem 1rem; color: #4a5568; text-decoration: none; font-size: 0.875rem; font-weight: 500; border-radius: 0.375rem; transition: all 0.2s; }
+        .navbar-item:hover { background: #f7fafc; color: #4299e1; }
+        .navbar-end { display: flex; align-items: center; gap: 1rem; }
+        .navbar-user { color: #718096; font-size: 0.875rem; }
+        .role-badge { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
+        .role-superadmin { background: #fbd38d; color: #744210; }
+        .role-admin { background: #fed7d7; color: #c53030; }
+        .btn { padding: 0.5rem 1rem; border-radius: 0.375rem; border: none; cursor: pointer; font-size: 0.875rem; font-weight: 500; transition: all 0.2s; }
+        .btn-secondary { background: #e2e8f0; color: #2d3748; }
+        .btn-secondary:hover { background: #cbd5e0; }
+
+        /* Dashboard container */
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* Header */
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+        .dashboard-title {
+            font-size: 1.75rem;
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+        .date-selector {
+            background: white;
+            border: 1px solid #e1e4e8;
+            border-radius: 6px;
+            padding: 0.75rem 1rem;
+            font-size: 0.875rem;
+            color: #24292e;
+        }
+        .date-selector .date-range {
+            font-weight: 600;
+        }
+        .date-selector .comparison {
+            color: #586069;
+            margin-top: 0.25rem;
+        }
+
+        /* Key metrics row */
+        .key-metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        .metric-card {
+            background: white;
+            border: 1px solid #e1e4e8;
+            border-radius: 6px;
+            padding: 1rem;
+        }
+        .metric-label {
+            font-size: 0.75rem;
+            color: #586069;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+        }
+        .metric-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #24292e;
+            margin-bottom: 0.25rem;
+        }
+        .metric-change {
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .metric-change.positive { color: #28a745; }
+        .metric-change.negative { color: #d73a49; }
+
+        /* Performance sections */
+        .performance-section {
+            background: white;
+            border: 1px solid #e1e4e8;
+            border-radius: 6px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .section-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #24292e;
+        }
+        .section-metrics {
+            display: flex;
+            gap: 2rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+        .section-metric {
+            flex: 0 0 auto;
+        }
+        .section-metric-label {
+            font-size: 0.75rem;
+            color: #586069;
+            margin-bottom: 0.25rem;
+            font-weight: 600;
+        }
+        .section-metric-value {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #24292e;
+        }
+        .section-metric-change {
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-left: 0.5rem;
+        }
+        .chart-container {
+            position: relative;
+            height: 250px;
+        }
+
+        /* Bottom grid */
+        .bottom-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+        .grid-card {
+            background: white;
+            border: 1px solid #e1e4e8;
+            border-radius: 6px;
+            padding: 1.25rem;
+        }
+        .grid-card-label {
+            font-size: 0.875rem;
+            color: #586069;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+        .grid-card-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #24292e;
+            margin-bottom: 0.25rem;
+        }
+        .grid-card-change {
+            font-size: 0.875rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: #586069;
+        }
+    </style>
+</head>
+<body>
+    <div id="navbar-container"></div>
+
+    <div class="container">
+        <div id="loading" class="loading">
+            <p>Loading dashboard...</p>
+        </div>
+
+        <div id="content" style="display: none;">
+            <!-- Header -->
+            <div class="dashboard-header">
+                <h1 class="dashboard-title">Millersville Ads Overview</h1>
+                <div class="date-selector">
+                    <div class="date-range" id="date-range">Oct 27 - Nov 2, 2025</div>
+                    <div class="comparison" id="comparison">compared to: Oct 13 - 19, 2025</div>
+                </div>
+            </div>
+
+            <!-- Key Metrics Row -->
+            <div class="key-metrics" id="key-metrics"></div>
+
+            <!-- Performance Section: General -->
+            <div class="performance-section">
+                <h2 class="section-title">Overall Performance</h2>
+                <div class="section-metrics" id="general-metrics"></div>
+                <div class="chart-container">
+                    <canvas id="general-chart"></canvas>
+                </div>
+            </div>
+
+            <!-- Performance Section: Interviews -->
+            <div class="performance-section">
+                <h2 class="section-title">Interviews</h2>
+                <div class="section-metrics" id="interviews-metrics"></div>
+                <div class="chart-container">
+                    <canvas id="interviews-chart"></canvas>
+                </div>
+            </div>
+
+            <!-- Performance Section: Contacts -->
+            <div class="performance-section">
+                <h2 class="section-title">Contacts</h2>
+                <div class="section-metrics" id="contacts-metrics"></div>
+                <div class="chart-container">
+                    <canvas id="contacts-chart"></canvas>
+                </div>
+            </div>
+
+            <!-- Bottom Grid -->
+            <div class="bottom-grid" id="bottom-grid"></div>
+        </div>
+    </div>
+
+    <script>
+        let dashboardData = null;
+        const charts = {};
+
+        async function checkAuth() {
+            const token = localStorage.getItem('auth_token');
+            if (!token) {
+                window.location.href = '/login.html';
+                return;
+            }
+
+            try {
+                const response = await fetch('/.netlify/functions/auth-me', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) throw new Error('Not authenticated');
+                const data = await response.json();
+                if (!data.authenticated) throw new Error('Not authenticated');
+
+                if (data.user.role !== 'admin' && data.user.role !== 'superadmin') {
+                    alert('Access denied. Admin privileges required.');
+                    window.location.href = '/';
+                    return;
+                }
+
+                const navbarContainer = document.getElementById('navbar-container');
+                navbarContainer.innerHTML = getNavbarHTML(data.user);
+                loadDashboard();
+            } catch (err) {
+                console.error('Auth check failed:', err);
+                localStorage.removeItem('auth_token');
+                localStorage.removeItem('user');
+                window.location.href = '/login.html';
+            }
+        }
+
+        async function loadDashboard() {
+            const loading = document.getElementById('loading');
+            const content = document.getElementById('content');
+
+            try {
+                const token = localStorage.getItem('auth_token');
+                // Use placeholder data by default (will auto-switch to real data when database is populated)
+                const response = await fetch('/.netlify/functions/dashboard-ad-spend', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) throw new Error('Failed to load dashboard data');
+
+                dashboardData = await response.json();
+                renderDashboard();
+
+                loading.style.display = 'none';
+                content.style.display = 'block';
+            } catch (err) {
+                console.error('Dashboard load error:', err);
+                loading.innerHTML = `<p style="color: #d73a49;">Error loading dashboard: ${err.message}</p>`;
+            }
+        }
+
+        function formatDate(dateStr) {
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        }
+
+        function formatCurrency(value) {
+            if (value >= 1000) {
+                return '$' + (value / 1000).toFixed(0) + 'K';
+            }
+            return '$' + value.toLocaleString();
+        }
+
+        function renderDashboard() {
+            if (!dashboardData) return;
+
+            // Update date ranges
+            document.getElementById('date-range').textContent =
+                `${formatDate(dashboardData.currentPeriod.startDate)} - ${formatDate(dashboardData.currentPeriod.endDate)}`;
+            document.getElementById('comparison').textContent =
+                `compared to: ${formatDate(dashboardData.comparisonPeriod.startDate)} - ${formatDate(dashboardData.comparisonPeriod.endDate)}`;
+
+            renderKeyMetrics();
+            renderPerformanceSection('general', 'general-metrics', 'general-chart');
+            renderPerformanceSection('interviews', 'interviews-metrics', 'interviews-chart');
+            renderPerformanceSection('contacts', 'contacts-metrics', 'contacts-chart');
+            renderBottomGrid();
+        }
+
+        function renderKeyMetrics() {
+            const metrics = dashboardData.currentPeriod.metrics;
+            const changes = dashboardData.wowChanges;
+
+            const keyMetricsHTML = `
+                <div class="metric-card">
+                    <div class="metric-label">Impr.</div>
+                    <div class="metric-value">${metrics.impressions.toLocaleString()}</div>
+                    <div class="metric-change ${parseFloat(changes.impressions) >= 0 ? 'positive' : 'negative'}">
+                        ${parseFloat(changes.impressions) >= 0 ? '+' : ''}${changes.impressions}% WoW
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Clicks</div>
+                    <div class="metric-value">${metrics.clicks.toLocaleString()}</div>
+                    <div class="metric-change ${parseFloat(changes.clicks) >= 0 ? 'positive' : 'negative'}">
+                        ${parseFloat(changes.clicks) >= 0 ? '+' : ''}${changes.clicks}% WoW
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Cost</div>
+                    <div class="metric-value">$${metrics.cost.toLocaleString()}</div>
+                    <div class="metric-change ${parseFloat(changes.cost) >= 0 ? 'negative' : 'positive'}">
+                        ${parseFloat(changes.cost) >= 0 ? '+' : ''}${changes.cost}% WoW
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Leads</div>
+                    <div class="metric-value">${metrics.leads}</div>
+                    <div class="metric-change ${parseFloat(changes.leads) >= 0 ? 'positive' : 'negative'}">
+                        ${parseFloat(changes.leads) >= 0 ? '+' : ''}${changes.leads}% WoW
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">CVR</div>
+                    <div class="metric-value">${metrics.cvr}%</div>
+                    <div class="metric-change ${parseFloat(changes.cvr) >= 0 ? 'positive' : 'negative'}">
+                        ${parseFloat(changes.cvr) >= 0 ? '+' : ''}${changes.cvr}% WoW
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">CPA</div>
+                    <div class="metric-value">$${metrics.cpa}</div>
+                    <div class="metric-change ${parseFloat(changes.cpa) >= 0 ? 'negative' : 'positive'}">
+                        ${parseFloat(changes.cpa) >= 0 ? '+' : ''}${changes.cpa}% WoW
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('key-metrics').innerHTML = keyMetricsHTML;
+        }
+
+        function renderPerformanceSection(campaignType, metricsId, chartId) {
+            const campaign = dashboardData.campaignBreakdown[campaignType];
+            const metrics = campaign.current;
+            const changes = campaign.wowChanges;
+
+            // Render metrics bar
+            const metricsHTML = `
+                <div class="section-metric">
+                    <div class="section-metric-label">Cost</div>
+                    <div class="section-metric-value">
+                        $${metrics.cost.toLocaleString()}
+                        <span class="section-metric-change ${parseFloat(changes.cost) >= 0 ? 'negative' : 'positive'}">
+                            ${parseFloat(changes.cost) >= 0 ? '+' : ''}${changes.cost}%
+                        </span>
+                    </div>
+                </div>
+                <div class="section-metric">
+                    <div class="section-metric-label">Leads</div>
+                    <div class="section-metric-value">
+                        ${metrics.leads}
+                        <span class="section-metric-change ${parseFloat(changes.leads) >= 0 ? 'positive' : 'negative'}">
+                            ${parseFloat(changes.leads) >= 0 ? '+' : ''}${changes.leads}%
+                        </span>
+                    </div>
+                </div>
+                <div class="section-metric">
+                    <div class="section-metric-label">CVR</div>
+                    <div class="section-metric-value">
+                        ${metrics.cvr}%
+                        <span class="section-metric-change ${parseFloat(changes.cvr) >= 0 ? 'positive' : 'negative'}">
+                            ${parseFloat(changes.cvr) >= 0 ? '+' : ''}${changes.cvr}%
+                        </span>
+                    </div>
+                </div>
+                <div class="section-metric">
+                    <div class="section-metric-label">CPA</div>
+                    <div class="section-metric-value">
+                        $${metrics.cpa}
+                        <span class="section-metric-change ${parseFloat(changes.cpa) >= 0 ? 'negative' : 'positive'}">
+                            ${parseFloat(changes.cpa) >= 0 ? '+' : ''}${changes.cpa}%
+                        </span>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById(metricsId).innerHTML = metricsHTML;
+
+            // Render chart
+            renderSectionChart(chartId, campaign.dailyData);
+        }
+
+        function renderSectionChart(canvasId, dailyData) {
+            const ctx = document.getElementById(canvasId);
+            if (charts[canvasId]) charts[canvasId].destroy();
+
+            const labels = dailyData.map(d => formatDate(d.date));
+            const data1 = dailyData.map(d => d.metric1);
+            const data2 = dailyData.map(d => d.metric2);
+
+            charts[canvasId] = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Metric 1',
+                            data: data1,
+                            borderColor: '#0366d6',
+                            backgroundColor: 'rgba(3, 102, 214, 0.1)',
+                            tension: 0.4,
+                            borderWidth: 2,
+                            pointRadius: 3,
+                            pointHoverRadius: 5
+                        },
+                        {
+                            label: 'Metric 2',
+                            data: data2,
+                            borderColor: '#f66a0a',
+                            backgroundColor: 'rgba(246, 106, 10, 0.1)',
+                            tension: 0.4,
+                            borderWidth: 2,
+                            pointRadius: 3,
+                            pointHoverRadius: 5
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: {
+                            grid: { color: '#e1e4e8', drawBorder: false },
+                            ticks: { color: '#586069', font: { size: 11 } }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: '#e1e4e8', drawBorder: false },
+                            ticks: { color: '#586069', font: { size: 11 } }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderBottomGrid() {
+            const sm = dashboardData.studentMetrics;
+
+            const gridHTML = `
+                <div class="grid-card">
+                    <div class="grid-card-label">Foundations Started</div>
+                    <div class="grid-card-value">${sm.foundationsStarted.value}</div>
+                    <div class="grid-card-change positive">↑${sm.foundationsStarted.wowChange}% WoW</div>
+                </div>
+                <div class="grid-card">
+                    <div class="grid-card-label">Enrollments</div>
+                    <div class="grid-card-value">${sm.enrollments.value}</div>
+                    <div class="grid-card-change positive">↑${sm.enrollments.wowChange}% WoW</div>
+                </div>
+                <div class="grid-card">
+                    <div class="grid-card-label">Enrollment Revenue</div>
+                    <div class="grid-card-value">${formatCurrency(sm.enrollmentRevenue.value)}</div>
+                    <div class="grid-card-change positive">↑${sm.enrollmentRevenue.wowChange}% WoW</div>
+                </div>
+                <div class="grid-card">
+                    <div class="grid-card-label">ROAS</div>
+                    <div class="grid-card-value">${sm.roas.value}</div>
+                    <div class="grid-card-change positive">↑${sm.roas.wowChange}% WoW</div>
+                </div>
+                <div class="grid-card">
+                    <div class="grid-card-label">Graduates</div>
+                    <div class="grid-card-value">${sm.graduates.value}</div>
+                    <div class="grid-card-change positive">↑${sm.graduates.yoyChange}% YoY</div>
+                </div>
+                <div class="grid-card">
+                    <div class="grid-card-label">Graduation Rate</div>
+                    <div class="grid-card-value">${sm.graduationRate.value}%</div>
+                    <div class="grid-card-change positive">↑${sm.graduationRate.yoyChange}% YoY</div>
+                </div>
+                <div class="grid-card">
+                    <div class="grid-card-label">Jobs Placed</div>
+                    <div class="grid-card-value">${sm.jobsPlaced.value}</div>
+                    <div class="grid-card-change positive">↑${sm.jobsPlaced.yoyChange}% YoY</div>
+                </div>
+                <div class="grid-card">
+                    <div class="grid-card-label">Job Placement Rate</div>
+                    <div class="grid-card-value">${sm.jobPlacementRate.value}%</div>
+                    <div class="grid-card-change positive">↑${sm.jobPlacementRate.yoyChange}% YoY</div>
+                </div>
+            `;
+
+            document.getElementById('bottom-grid').innerHTML = gridHTML;
+        }
+
+        async function handleLogout() {
+            const token = localStorage.getItem('auth_token');
+            await fetch('/.netlify/functions/auth-logout', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('user');
+            window.location.href = '/login.html';
+        }
+
+        checkAuth();
+    </script>
+</body>
+</html>
