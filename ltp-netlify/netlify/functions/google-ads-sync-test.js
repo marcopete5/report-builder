@@ -38,9 +38,10 @@ exports.handler = async (event) => {
             };
         }
 
-        // Fetch sample data (last 7 days)
-        const endDate = new Date().toISOString().split('T')[0];
-        const startDate = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+        // Fetch sample data (use query params or default to last 7 days)
+        const q = event.queryStringParameters || {};
+        const endDate = q.endDate || new Date().toISOString().split('T')[0];
+        const startDate = q.startDate || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
         console.log(`Fetching sample data from ${startDate} to ${endDate}...`);
         const campaignData = await getCampaignPerformance(startDate, endDate);
