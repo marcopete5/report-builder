@@ -23,16 +23,22 @@ function classifyCampaign(campaignName) {
 }
 
 /**
- * Parse date string in YYYYMMDD format to Date object
+ * Parse date string in YYYYMMDD or YYYY-MM-DD format to Date object
  */
 function parseGoogleAdsDate(dateStr) {
     if (!dateStr) return new Date();
 
-    const year = parseInt(dateStr.substring(0, 4));
-    const month = parseInt(dateStr.substring(4, 6)) - 1; // Month is 0-indexed
-    const day = parseInt(dateStr.substring(6, 8));
-
-    return new Date(year, month, day);
+    // Handle both YYYYMMDD and YYYY-MM-DD formats
+    if (dateStr.includes('-')) {
+        // YYYY-MM-DD format
+        return new Date(dateStr);
+    } else {
+        // YYYYMMDD format
+        const year = parseInt(dateStr.substring(0, 4));
+        const month = parseInt(dateStr.substring(4, 6)) - 1; // Month is 0-indexed
+        const day = parseInt(dateStr.substring(6, 8));
+        return new Date(year, month, day);
+    }
 }
 
 /**
