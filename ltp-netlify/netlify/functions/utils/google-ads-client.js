@@ -102,7 +102,7 @@ async function executeQuery(query, options = {}) {
 
         const requestOptions = {
             hostname: 'googleads.googleapis.com',
-            path: `/v18/customers/${cleanCustomerId}/googleAds:search`,
+            path: `/v22/customers/${cleanCustomerId}/googleAds:search`,
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${accessToken}`,
