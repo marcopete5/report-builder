@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ad Data Debug - Compare API vs Dashboard</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f5f7fa;
+            color: #1a1a1a;
+            padding: 2rem;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            color: #24292e;
+        }
+        .subtitle {
+            color: #586069;
+            margin-bottom: 2rem;
+        }
+        .section {
+            background: white;
+            border: 1px solid #e1e4e8;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #24292e;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .refresh-btn {
+            padding: 0.5rem 1rem;
+            background: #0366d6;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        .refresh-btn:hover {
+            background: #0256c7;
+        }
+        .date-controls {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .date-control {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+        .date-control label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #586069;
+        }
+        .date-control input {
+            padding: 0.5rem;
+            border: 1px solid #e1e4e8;
+            border-radius: 4px;
+            font-size: 0.875rem;
+        }
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .metric-box {
+            background: #f6f8fa;
+            padding: 1rem;
+            border-radius: 6px;
+            border: 1px solid #e1e4e8;
+        }
+        .metric-label {
+            font-size: 0.75rem;
+            color: #586069;
+            text-transform: uppercase;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        .metric-value {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #24292e;
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.875rem;
+        }
+        .data-table th {
+            background: #f6f8fa;
+            padding: 0.75rem;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid #e1e4e8;
+        }
+        .data-table td {
+            padding: 0.75rem;
+            border-bottom: 1px solid #e1e4e8;
+        }
+        .data-table tr:hover {
+            background: #f6f8fa;
+        }
+        .json-view {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 1rem;
+            border-radius: 6px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.75rem;
+            overflow-x: auto;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #586069;
+        }
+        .error {
+            background: #ffeef0;
+            border: 1px solid #d73a49;
+            color: #d73a49;
+            padding: 1rem;
+            border-radius: 6px;
+        }
+        .success {
+            background: #e6ffed;
+            border: 1px solid #28a745;
+            color: #28a745;
+            padding: 1rem;
+            border-radius: 6px;
+        }
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+        @media (max-width: 768px) {
+            .comparison-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Ad Data Debug Tool</h1>
+        <p class="subtitle">Compare raw Google Ads data with dashboard calculations</p>
+
+        <div class="date-controls">
+            <div class="date-control">
+                <label>Start Date</label>
+                <input type="date" id="start-date" />
+            </div>
+            <div class="date-control">
+                <label>End Date</label>
+                <input type="date" id="end-date" />
+            </div>
+            <button class="refresh-btn" id="fetch-data">Fetch Data</button>
+        </div>
+
+        <!-- Summary Comparison -->
+        <div class="section">
+            <div class="section-title">
+                <span>📊 Summary Metrics</span>
+                <span id="date-range-display" style="font-size: 0.875rem; color: #586069;"></span>
+            </div>
+            <div class="metrics-grid" id="summary-metrics">
+                <div class="loading">Select dates and click "Fetch Data"</div>
+            </div>
+        </div>
+
+        <!-- Database Records -->
+        <div class="section">
+            <div class="section-title">Database Records (ad_spend collection)</div>
+            <div id="db-records">
+                <div class="loading">No data loaded</div>
+            </div>
+        </div>
+
+        <!-- Dashboard API Response -->
+        <div class="section">
+            <div class="section-title">Dashboard API Response</div>
+            <div id="dashboard-response">
+                <div class="loading">No data loaded</div>
+            </div>
+        </div>
+
+        <!-- Campaign Breakdown -->
+        <div class="section">
+            <div class="section-title">Campaign Breakdown</div>
+            <div id="campaign-breakdown">
+                <div class="loading">No data loaded</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Set default dates (last 7 days)
+        const today = new Date();
+        const sevenDaysAgo = new Date(today);
+        sevenDaysAgo.setDate(today.getDate() - 6);
+
+        document.getElementById('end-date').value = formatDateForInput(today);
+        document.getElementById('start-date').value = formatDateForInput(sevenDaysAgo);
+
+        function formatDateForInput(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        function formatDate(dateStr) {
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        }
+
+        async function fetchData() {
+            const startDate = document.getElementById('start-date').value;
+            const endDate = document.getElementById('end-date').value;
+
+            if (!startDate || !endDate) {
+                alert('Please select both start and end dates');
+                return;
+            }
+
+            // Update date range display
+            document.getElementById('date-range-display').textContent =
+                `${formatDate(startDate)} - ${formatDate(endDate)}`;
+
+            const token = localStorage.getItem('auth_token');
+            if (!token) {
+                window.location.href = '/login.html';
+                return;
+            }
+
+            try {
+                // Fetch from dashboard API
+                const dashboardUrl = `/.netlify/functions/dashboard-ad-spend?startDate=${startDate}&endDate=${endDate}`;
+                const dashboardResponse = await fetch(dashboardUrl, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const dashboardData = await dashboardResponse.json();
+
+                // Display summary metrics
+                renderSummaryMetrics(dashboardData);
+
+                // Display dashboard response
+                renderDashboardResponse(dashboardData);
+
+                // Fetch raw database records
+                await fetchDatabaseRecords(startDate, endDate, token);
+
+                // Display campaign breakdown
+                renderCampaignBreakdown(dashboardData);
+
+            } catch (err) {
+                console.error('Error fetching data:', err);
+                document.getElementById('summary-metrics').innerHTML =
+                    `<div class="error">Error: ${err.message}</div>`;
+            }
+        }
+
+        async function fetchDatabaseRecords(startDate, endDate, token) {
+            try {
+                // We'll need to create a simple endpoint to fetch raw records, or use existing one
+                const response = await fetch(`/.netlify/functions/db-inspect?collection=ad_spend&startDate=${startDate}&endDate=${endDate}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    renderDatabaseRecords(data);
+                } else {
+                    document.getElementById('db-records').innerHTML =
+                        '<div class="error">Database inspection endpoint not available or no data found</div>';
+                }
+            } catch (err) {
+                document.getElementById('db-records').innerHTML =
+                    `<div class="error">Error fetching database records: ${err.message}</div>`;
+            }
+        }
+
+        function renderSummaryMetrics(data) {
+            const metrics = data.currentPeriod.metrics;
+
+            const html = `
+                <div class="metric-box">
+                    <div class="metric-label">Impressions</div>
+                    <div class="metric-value">${metrics.impressions.toLocaleString()}</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-label">Clicks</div>
+                    <div class="metric-value">${metrics.clicks.toLocaleString()}</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-label">Cost</div>
+                    <div class="metric-value">$${parseFloat(metrics.cost).toLocaleString()}</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-label">Leads</div>
+                    <div class="metric-value">${metrics.leads || 0}</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-label">CVR</div>
+                    <div class="metric-value">${metrics.cvr}%</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-label">CPA</div>
+                    <div class="metric-value">$${metrics.cpa}</div>
+                </div>
+            `;
+
+            document.getElementById('summary-metrics').innerHTML = html;
+        }
+
+        function renderDatabaseRecords(data) {
+            if (!data.records || data.records.length === 0) {
+                document.getElementById('db-records').innerHTML =
+                    '<div class="error">No records found in database for this date range</div>';
+                return;
+            }
+
+            const records = data.records;
+            let html = `
+                <div style="margin-bottom: 1rem;">
+                    <strong>Total Records:</strong> ${records.length}
+                </div>
+                <div style="overflow-x: auto;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Campaign</th>
+                                <th>Type</th>
+                                <th>Impressions</th>
+                                <th>Clicks</th>
+                                <th>Cost</th>
+                                <th>Conversions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            records.forEach(record => {
+                const date = new Date(record.date).toLocaleDateString();
+                html += `
+                    <tr>
+                        <td>${date}</td>
+                        <td>${record.campaign || 'N/A'}</td>
+                        <td>${record.campaign_type || 'general'}</td>
+                        <td>${(record.impressions || 0).toLocaleString()}</td>
+                        <td>${(record.clicks || 0).toLocaleString()}</td>
+                        <td>$${(record.cost || 0).toFixed(2)}</td>
+                        <td>${record.conversions || record.leads || 0}</td>
+                    </tr>
+                `;
+            });
+
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            document.getElementById('db-records').innerHTML = html;
+        }
+
+        function renderDashboardResponse(data) {
+            const html = `
+                <div style="margin-bottom: 1rem;">
+                    <strong>Data Source:</strong> ${data.usingPlaceholderData ?
+                        '<span style="color: #f66a0a;">Placeholder Data</span>' :
+                        '<span style="color: #28a745;">Real Data from Database</span>'}
+                </div>
+                <div class="json-view">${JSON.stringify(data, null, 2)}</div>
+            `;
+
+            document.getElementById('dashboard-response').innerHTML = html;
+        }
+
+        function renderCampaignBreakdown(data) {
+            if (!data.campaignBreakdown) {
+                document.getElementById('campaign-breakdown').innerHTML =
+                    '<div class="error">No campaign breakdown available</div>';
+                return;
+            }
+
+            const breakdown = data.campaignBreakdown;
+
+            let html = '<div class="comparison-grid">';
+
+            ['general', 'interviews', 'contacts'].forEach(type => {
+                const campaign = breakdown[type];
+                if (!campaign) return;
+
+                html += `
+                    <div>
+                        <h3 style="margin-bottom: 1rem; text-transform: capitalize;">${type}</h3>
+                        <div class="metrics-grid" style="grid-template-columns: repeat(2, 1fr);">
+                            <div class="metric-box">
+                                <div class="metric-label">Cost</div>
+                                <div class="metric-value" style="font-size: 1.25rem;">
+                                    $${parseFloat(campaign.current.cost).toLocaleString()}
+                                </div>
+                            </div>
+                            <div class="metric-box">
+                                <div class="metric-label">Leads</div>
+                                <div class="metric-value" style="font-size: 1.25rem;">
+                                    ${campaign.current.leads}
+                                </div>
+                            </div>
+                            <div class="metric-box">
+                                <div class="metric-label">CVR</div>
+                                <div class="metric-value" style="font-size: 1.25rem;">
+                                    ${campaign.current.cvr}%
+                                </div>
+                            </div>
+                            <div class="metric-box">
+                                <div class="metric-label">CPA</div>
+                                <div class="metric-value" style="font-size: 1.25rem;">
+                                    $${campaign.current.cpa}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+
+            document.getElementById('campaign-breakdown').innerHTML = html;
+        }
+
+        // Event listeners
+        document.getElementById('fetch-data').addEventListener('click', fetchData);
+
+        // Auto-fetch on page load
+        fetchData();
+    </script>
+</body>
+</html>
