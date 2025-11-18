@@ -143,10 +143,12 @@ async function syncGoogleAdsData(startDate, endDate) {
         };
     } catch (err) {
         console.error('Sync error:', err);
+        console.error('Error stack:', err.stack);
         return {
             success: false,
             error: err.message,
-            stack: err.stack
+            errorDetails: err.toString(),
+            stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
         };
     }
 }
@@ -187,6 +189,8 @@ exports.handler = async (event) => {
 
         const result = await syncGoogleAdsData(startDate, endDate);
 
+        console.log('Sync result:', result);
+
         return {
             statusCode: result.success ? 200 : 500,
             headers: {
@@ -197,6 +201,7 @@ exports.handler = async (event) => {
         };
     } catch (err) {
         console.error('Handler error:', err);
+        console.error('Handler error stack:', err.stack);
         return {
             statusCode: 500,
             headers: {
@@ -206,6 +211,8 @@ exports.handler = async (event) => {
             body: JSON.stringify({
                 success: false,
                 error: err.message,
+                errorType: err.name,
+                errorDetails: err.toString(),
                 stack: err.stack
             })
         };
