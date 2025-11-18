@@ -47,13 +47,17 @@ async function syncGoogleAdsData(startDate, endDate) {
         console.log(`Fetching Google Ads data from ${startDate} to ${endDate}...`);
         const campaignData = await getCampaignPerformance(startDate, endDate);
 
+        console.log(`Received ${campaignData ? campaignData.length : 0} records from Google Ads API`);
+
         if (!campaignData || campaignData.length === 0) {
+            console.log('No campaign data found for this date range');
             return {
                 success: true,
-                message: 'No data returned from Google Ads for the specified date range',
+                message: 'No data returned from Google Ads for the specified date range. This may be because there were no active campaigns or no ad spend during this period.',
                 recordsProcessed: 0,
                 recordsInserted: 0,
-                recordsUpdated: 0
+                recordsUpdated: 0,
+                dateRange: { startDate, endDate }
             };
         }
 

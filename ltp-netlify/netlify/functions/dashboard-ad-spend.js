@@ -293,21 +293,14 @@ exports.handler = async (event) => {
         const comparisonStartDate = q.comparisonStartDate || '2025-10-13';
         const comparisonEndDate = q.comparisonEndDate || '2025-10-19';
 
-        // If usePlaceholder is true OR if database is empty, use placeholder data
+        // Connect to database
         const db = await getDb();
         await createAdSpendIndexes(db);
         const coll = db.collection('ad_spend');
         const recordCount = await coll.countDocuments();
 
-        if (usePlaceholder || recordCount === 0) {
-            // Use placeholder data for development
-            const placeholderData = generatePlaceholderData(
-                startDate,
-                endDate,
-                comparisonStartDate,
-                comparisonEndDate
-            );
-
+        // If no data in database, return empty state
+        if (recordCount === 0) {
             return {
                 statusCode: 200,
                 headers: {
@@ -316,8 +309,56 @@ exports.handler = async (event) => {
                     'Cache-Control': 'no-store'
                 },
                 body: JSON.stringify({
-                    ...placeholderData,
-                    usingPlaceholderData: true
+                    currentPeriod: {
+                        startDate,
+                        endDate,
+                        metrics: {
+                            impressions: 0,
+                            clicks: 0,
+                            cost: 0,
+                            leads: 0,
+                            cvr: 0,
+                            cpa: 0
+                        },
+                        dailyData: []
+                    },
+                    comparisonPeriod: {
+                        startDate: comparisonStartDate,
+                        endDate: comparisonEndDate,
+                        metrics: {
+                            impressions: 0,
+                            clicks: 0,
+                            cost: 0,
+                            leads: 0,
+                            cvr: 0,
+                            cpa: 0
+                        }
+                    },
+                    wowChanges: {
+                        impressions: 0,
+                        clicks: 0,
+                        cost: 0,
+                        leads: 0,
+                        cvr: 0,
+                        cpa: 0
+                    },
+                    campaignBreakdown: {
+                        general: { current: { cost: 0, leads: 0, cvr: 0, cpa: 0 }, wowChanges: {}, dailyData: [] },
+                        interviews: { current: { cost: 0, leads: 0, cvr: 0, cpa: 0 }, wowChanges: {}, dailyData: [] },
+                        contacts: { current: { cost: 0, leads: 0, cvr: 0, cpa: 0 }, wowChanges: {}, dailyData: [] }
+                    },
+                    studentMetrics: {
+                        foundationsStarted: { value: 0, wowChange: 0 },
+                        enrollments: { value: 0, wowChange: 0 },
+                        enrollmentRevenue: { value: 0, wowChange: 0 },
+                        roas: { value: 0, wowChange: 0 },
+                        graduates: { value: 0, yoyChange: 0 },
+                        graduationRate: { value: 0, yoyChange: 0 },
+                        jobsPlaced: { value: 0, yoyChange: 0 },
+                        jobPlacementRate: { value: 0, yoyChange: 0 }
+                    },
+                    noData: true,
+                    message: 'No ad spend data found. Please sync data from Google Ads first.'
                 })
             };
         }
