@@ -670,14 +670,6 @@
                 if (!response.ok) throw new Error('Failed to load dashboard data');
 
                 dashboardData = await response.json();
-
-                // DEBUG: Log the full API response
-                console.log('=== DASHBOARD DATA ===');
-                console.log('Full response:', dashboardData);
-                console.log('Campaign breakdown:', dashboardData.campaignBreakdown);
-                console.log('General dailyData:', dashboardData.campaignBreakdown?.general?.dailyData);
-                console.log('======================');
-
                 renderDashboard();
 
                 loading.style.display = 'none';
@@ -911,10 +903,8 @@
             const ctx = document.getElementById(canvasId);
             if (charts[canvasId]) charts[canvasId].destroy();
 
-            // DEBUG: Log the data structure
-            console.log(`[${canvasId}] Daily data structure:`, dailyData);
-            console.log(`[${canvasId}] Has current?`, dailyData.current !== undefined);
-            console.log(`[${canvasId}] Has comparison?`, dailyData.comparison !== undefined);
+            // Data structure validation
+            // dailyData should have { current: [...], comparison: [...] }
 
             // Helper function to abbreviate numbers
             function abbreviateNumber(value) {
@@ -934,10 +924,6 @@
             let currentData = currentDailyData.map(d => d.metric1);
             let comparisonData = comparisonDailyData.map(d => d.metric1 || d.metric2);
 
-            // DEBUG: Log the extracted data
-            console.log(`[${canvasId}] Current data (before padding):`, currentData);
-            console.log(`[${canvasId}] Comparison data (before padding):`, comparisonData);
-
             // Store original dates for tooltip
             let currentDates = currentDailyData.map(d => d.date);
             let comparisonDates = comparisonDailyData.map(d => d.date);
@@ -956,9 +942,6 @@
                 currentData.push(null);
                 currentDates.push(null);
             }
-
-            console.log(`[${canvasId}] Current data (after padding):`, currentData);
-            console.log(`[${canvasId}] Comparison data (after padding):`, comparisonData);
 
             // Create x-axis labels as "Day 1", "Day 2", etc.
             const numDays = maxLength;
