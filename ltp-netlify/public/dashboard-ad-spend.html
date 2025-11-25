@@ -294,7 +294,11 @@
             <!-- Header -->
             <div class="dashboard-header">
                 <h1 class="dashboard-title">Millersville Ads Overview</h1>
-                <div class="date-selector" id="date-selector-toggle">
+                <div style="display: flex; gap: 1rem; align-items: center;">
+                    <button id="backfill-btn" class="btn" style="background: #48bb78; color: white; font-weight: 600;">
+                        📊 Import Historical Data
+                    </button>
+                    <div class="date-selector" id="date-selector-toggle">
                     <div class="date-range" id="date-range">Oct 27 - Nov 2, 2025</div>
                     <div class="comparison" id="comparison">compared to: Oct 13 - 19, 2025</div>
 
@@ -336,6 +340,7 @@
                             <button class="apply-dates-btn" id="apply-custom-dates" disabled>Apply Custom Range</button>
                         </div>
                     </div>
+                </div>
                 </div>
             </div>
 
@@ -1135,6 +1140,96 @@
             localStorage.removeItem('user');
             window.location.href = '/login.html';
         }
+
+        async function runBackfillInChunks() {
+            const btn = document.getElementById('backfill-btn');
+            const originalText = btn.innerHTML;
+
+            btn.disabled = true;
+            btn.innerHTML = '⏳ Importing...';
+            btn.style.background = '#718096';
+
+            const token = localStorage.getItem('auth_token');
+
+            // Calculate date ranges for last 6 months in 30-day chunks
+            const today = new Date();
+            const sixMonthsAgo = new Date(today);
+            sixMonthsAgo.setMonth(today.getMonth() - 6);
+
+            const chunks = [];
+            let currentStart = new Date(sixMonthsAgo);
+
+            while (currentStart < today) {
+                const currentEnd = new Date(currentStart);
+                currentEnd.setDate(currentEnd.getDate() + 29); // 30 days
+
+                if (currentEnd > today) currentEnd.setTime(today.getTime());
+
+                chunks.push({
+                    start: currentStart.toISOString().split('T')[0],
+                    end: currentEnd.toISOString().split('T')[0]
+                });
+
+                currentStart = new Date(currentEnd);
+                currentStart.setDate(currentStart.getDate() + 1);
+            }
+
+            console.log(`Running backfill in ${chunks.length} chunks...`);
+
+            let totalInserted = 0;
+            let totalUpdated = 0;
+
+            for (let i = 0; i < chunks.length; i++) {
+                const chunk = chunks[i];
+                btn.innerHTML = `⏳ Importing ${i + 1}/${chunks.length}...`;
+                console.log(`\nChunk ${i + 1}/${chunks.length}: ${chunk.start} to ${chunk.end}`);
+
+                try {
+                    const response = await fetch(`/.netlify/functions/google-ads-sync?startDate=${chunk.start}&endDate=${chunk.end}`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        console.log(`✅ Inserted: ${result.recordsInserted}, Updated: ${result.recordsUpdated}`);
+                        totalInserted += result.recordsInserted || 0;
+                        totalUpdated += result.recordsUpdated || 0;
+                    } else {
+                        console.log(`❌ Error: ${result.error || result.message}`);
+                    }
+
+                    // Small delay between chunks
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                } catch (err) {
+                    console.error(`❌ Chunk failed:`, err.message);
+                }
+            }
+
+            console.log(`\n🎉 Backfill complete!`);
+            console.log(`Total Inserted: ${totalInserted}`);
+            console.log(`Total Updated: ${totalUpdated}`);
+
+            btn.innerHTML = '✅ Import Complete!';
+            btn.style.background = '#48bb78';
+
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                // Reload dashboard to show new data
+                loadDashboard();
+            }, 2000);
+
+            alert(`Backfill complete!\n\nInserted: ${totalInserted} records\nUpdated: ${totalUpdated} records\n\nRefreshing dashboard...`);
+        }
+
+        // Setup backfill button
+        document.addEventListener('DOMContentLoaded', () => {
+            const backfillBtn = document.getElementById('backfill-btn');
+            if (backfillBtn) {
+                backfillBtn.addEventListener('click', runBackfillInChunks);
+            }
+        });
 
         checkAuth();
     </script>
