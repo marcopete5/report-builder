@@ -33,7 +33,7 @@ exports.handler = async (event) => {
         const q = event.queryStringParameters || {};
         const studentId = q.studentId || '';
         const studentName = q.studentName || 'Student';
-        const daysParam = q.days || '7';
+        const daysParam = q.days || 'fullPeriod';
         const startDate = q.startDate;
         const endDate = q.endDate;
 
@@ -45,17 +45,16 @@ exports.handler = async (event) => {
             };
         }
 
-        let days;
-        if (daysParam === 'all') {
-            days = 'all';
-        } else {
-            days = Math.max(1, parseInt(daysParam, 10));
-        }
+        const days =
+            daysParam === 'all' || daysParam === 'fullPeriod'
+                ? daysParam
+                : Math.max(1, Math.min(365, parseInt(daysParam, 10)));
 
         // Determine date range
         let since,
             until,
-            isCustomRange = false;
+            isCustomRange = false,
+            isFullPeriod = false;
         if (startDate && endDate) {
             since = new Date(startDate);
             until = new Date(endDate);
@@ -63,6 +62,11 @@ exports.handler = async (event) => {
             isCustomRange = true;
         } else if (days === 'all') {
             since = new Date('2000-01-01');
+            until = new Date();
+        } else if (days === 'fullPeriod') {
+            // Full Period - will use student's course start date
+            isFullPeriod = true;
+            since = null; // Will be set later based on student data
             until = new Date();
         } else {
             since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
@@ -79,6 +83,21 @@ exports.handler = async (event) => {
             .find({ studentId })
             .sort({ createdAt: -1 })
             .toArray();
+
+        // For fullPeriod mode, get student's course start date first
+        if (isFullPeriod) {
+            const studentDoc = await db.collection('students').findOne({ studentId });
+            if (studentDoc && studentDoc.courseStartDate) {
+                since = new Date(studentDoc.courseStartDate);
+            } else {
+                // Fallback to first submission date if no course start date
+                if (allSubmissions.length > 0) {
+                    since = new Date(allSubmissions[allSubmissions.length - 1].createdAt);
+                } else {
+                    since = new Date('2000-01-01');
+                }
+            }
+        }
 
         // Get submissions in date range (for display)
         const submissions = await coll
@@ -133,13 +152,15 @@ exports.handler = async (event) => {
         if (isCustomRange) {
             rangeTotal = totalEntries;
             rangeLabel = `${startDate} to ${endDate}`;
+        } else if (isFullPeriod) {
+            rangeTotal = totalEntries;
+            rangeLabel = 'Full Enrollment Period';
+        } else if (days === 'all') {
+            rangeTotal = totalEntries;
+            rangeLabel = 'All Time';
         } else {
-            const last7Days = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-            rangeTotal = await coll.countDocuments({
-                studentId,
-                createdAt: { $gte: last7Days }
-            });
-            rangeLabel = 'last 7 days';
+            rangeTotal = totalEntries;
+            rangeLabel = `last ${days} days`;
         }
 
         // Last submission
@@ -174,7 +195,8 @@ exports.handler = async (event) => {
                         endDate: studentDoc.courseEndDate,
                         enrolledCourse: studentDoc.course,
                         enrollingInstitution: studentDoc.institution,
-                        mentorName: null // We'll fetch mentor name from Airtable if mentorId exists
+                        mentorName: null, // We'll fetch mentor name from Airtable if mentorId exists
+                        profilePictureUrl: studentDoc.profilePictureUrl || null
                     };
 
                     // Fetch mentor name from Airtable if we have a mentorId
@@ -668,9 +690,27 @@ exports.handler = async (event) => {
       border: 1px solid #8f97a8;
       margin-bottom: 24px;
       display: grid;
-      grid-template-columns: 1fr 2fr;
-      gap: 32px;
+      grid-template-columns: auto 1fr 2fr;
+      gap: 24px;
       align-items: center;
+    }
+    .header-profile-pic {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 3px solid #e5e7eb;
+    }
+    .header-profile-placeholder {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: #cbd5e0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 40px;
+      border: 3px solid #e5e7eb;
     }
     .header-info {
       display: grid;
@@ -860,14 +900,22 @@ exports.handler = async (event) => {
     </div>
     <div class="navbar-menu">
       <a href="/" class="navbar-item">🏠 Home</a>
+      <a href="/dashboards.html" class="navbar-item">📊 Dashboards</a>
       <a href="/admin-users.html" class="navbar-item">👥 Users</a>
-      <a href="/.netlify/functions/report-weekly?view=html" class="navbar-item">📊 Weekly Report</a>
+      <a href="/.netlify/functions/report-weekly?view=html" class="navbar-item">📈 Weekly Report</a>
       <a href="/.netlify/functions/db-inspect?format=pretty" class="navbar-item">🔍 Database</a>
     </div>
   </nav>
   <div class="container">
 
     <div class="header">
+      ${
+          airtableData.profilePictureUrl
+              ? `<img src="${airtableData.profilePictureUrl}" alt="${escapeHtml(
+                    studentName
+                )}" class="header-profile-pic">`
+              : '<div class="header-profile-placeholder">👤</div>'
+      }
       <div>
         <h1>${escapeHtml(studentName)}</h1>
         <div class="subtitle">Student ID: ${escapeHtml(studentId)}</div>
@@ -918,17 +966,14 @@ exports.handler = async (event) => {
     <div class="date-filter">
       <label style="font-size: 14px; font-weight: 500;">Date Range:</label>
       <button class="pill ${
+          days === 'fullPeriod' && !isCustomRange ? 'active' : ''
+      }" onclick="setDays('fullPeriod')">Full Period</button>
+      <button class="pill ${
           days === 7 && !isCustomRange ? 'active' : ''
       }" onclick="setDays(7)">7d</button>
       <button class="pill ${
           days === 30 && !isCustomRange ? 'active' : ''
       }" onclick="setDays(30)">30d</button>
-      <button class="pill ${
-          days === 180 && !isCustomRange ? 'active' : ''
-      }" onclick="setDays(180)">6m</button>
-      <button class="pill ${
-          days === 365 && !isCustomRange ? 'active' : ''
-      }" onclick="setDays(365)">1y</button>
       <button class="pill ${
           days === 'all' && !isCustomRange ? 'active' : ''
       }" onclick="setDays('all')">All Time</button>
@@ -1276,9 +1321,9 @@ exports.handler = async (event) => {
     const grouped = groupData(enrichedSeries, groupBy);
     const labels = grouped.map(d => {
       if (groupBy === 'week') {
-        return 'Week of ' + new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        return 'Week of ' + new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
       }
-      return d.date;
+      return new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     });
 
     // Chart instance
@@ -1432,7 +1477,7 @@ exports.handler = async (event) => {
       const url = new URL(window.location.href);
       url.searchParams.delete('startDate');
       url.searchParams.delete('endDate');
-      url.searchParams.set('days', '7');
+      url.searchParams.set('days', 'fullPeriod');
       window.location.href = url.toString();
     }
   </script>

@@ -73,8 +73,29 @@ exports.handler = async (event) => {
 
         let since, until;
         if (days === 'all') {
-            since = new Date('2000-01-01');
-            until = new Date();
+            // Full Period: from course start date to course end date, extension date, or today
+            since = student.courseStartDate ? new Date(student.courseStartDate) : new Date('2000-01-01');
+
+            const today = new Date();
+            const courseEndDate = student.courseEndDate ? new Date(student.courseEndDate) : null;
+            const courseExtDate = student.courseExtDate ? new Date(student.courseExtDate) : null;
+
+            // Determine the official end date (later of courseEndDate or courseExtDate)
+            let officialEndDate = null;
+            if (courseEndDate && courseExtDate) {
+                officialEndDate = courseEndDate > courseExtDate ? courseEndDate : courseExtDate;
+            } else if (courseEndDate) {
+                officialEndDate = courseEndDate;
+            } else if (courseExtDate) {
+                officialEndDate = courseExtDate;
+            }
+
+            // If official end date hasn't passed, use today. Otherwise use the official end date.
+            if (officialEndDate && officialEndDate < today) {
+                until = officialEndDate;
+            } else {
+                until = today;
+            }
         } else {
             since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
             until = new Date();
@@ -422,7 +443,8 @@ exports.handler = async (event) => {
                     courseEndDate: airtableData.endDate || student.courseEndDate,
                     mentorName: airtableData.mentorName,
                     estimatedEndDate: estimatedEndDate,
-                    daysLate: daysLate
+                    daysLate: daysLate,
+                    profilePictureUrl: student.profilePictureUrl || null
                 },
                 stats: {
                     totalSubmissions,

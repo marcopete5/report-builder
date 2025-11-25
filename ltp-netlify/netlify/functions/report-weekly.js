@@ -67,26 +67,34 @@ exports.handler = async (event) => {
 
     try {
         const q = event.queryStringParameters || {};
+        const daysParam = q.days || 'fullPeriod'; // Default to fullPeriod
         const days =
-            q.days === 'all'
-                ? 'all'
-                : Math.max(1, Math.min(365, parseInt(q.days || '7', 10)));
+            daysParam === 'all' || daysParam === 'fullPeriod'
+                ? daysParam
+                : Math.max(1, Math.min(365, parseInt(daysParam, 10)));
         const formatRaw = q.format;
         const format = (formatRaw || '').toLowerCase();
         const courseFilter = q.course || null;
         const institutionFilter = q.institution || null;
-        const activityFilter = q.activity || null; // active, inactive, current, former
+        const activityFilter = q.activity || 'current'; // Default to 'current' instead of null
         // Support custom date range
         let since, until;
         const startDate = q.startDate;
         const endDate = q.endDate;
+        const isFullPeriod = days === 'fullPeriod' && !startDate && !endDate;
 
         if (startDate && endDate) {
+            // Custom date range - applies to all students
             since = new Date(startDate);
             until = new Date(endDate);
             until.setHours(23, 59, 59, 999); // Include the entire end day
         } else if (days === 'all') {
             since = new Date('2000-01-01'); // Far back date for "all time"
+            until = new Date();
+        } else if (isFullPeriod) {
+            // Full period mode - each student will have their own date range
+            // Set placeholder dates for now, will be calculated per student
+            since = null;
             until = new Date();
         } else {
             since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
@@ -102,49 +110,99 @@ exports.handler = async (event) => {
         // Get ALL students from the database
         const allStudents = await studentsColl.find({}).toArray();
 
-        // Aggregate activity per student in the selected date range
-        const pipeline = [
-            { $match: { createdAt: { $gte: since, $lte: until } } },
-            {
-                $addFields: {
-                    _day: {
-                        $dateToString: {
-                            format: '%Y-%m-%d',
-                            date: '$createdAt'
+        let activityData = [];
+
+        if (isFullPeriod) {
+            // Full Period mode: calculate activity for each student from their courseStartDate to now
+            for (const student of allStudents) {
+                const studentStartDate = student.courseStartDate;
+                if (!studentStartDate) {
+                    // Skip students without a start date in fullPeriod mode
+                    continue;
+                }
+
+                const studentSince = new Date(studentStartDate);
+                const studentUntil = new Date();
+
+                // Query submissions for this student in their enrollment period
+                const submissions = await coll
+                    .find({
+                        studentId: student.studentId,
+                        createdAt: { $gte: studentSince, $lte: studentUntil }
+                    })
+                    .sort({ createdAt: 1 })
+                    .toArray();
+
+                if (submissions.length === 0) {
+                    // Student has no submissions in their enrollment period
+                    continue;
+                }
+
+                // Calculate active days
+                const activeDaysSet = new Set(
+                    submissions.map((s) =>
+                        s.createdAt.toISOString().slice(0, 10)
+                    )
+                );
+
+                const lastSubmission = submissions[submissions.length - 1];
+
+                activityData.push({
+                    studentId: student.studentId,
+                    studentName:
+                        student.studentName || lastSubmission.studentName,
+                    entries: submissions.length,
+                    activeDays: activeDaysSet.size,
+                    lastSeen: lastSubmission.createdAt,
+                    lastLessonId: lastSubmission.lessonId,
+                    lastLessonTitle: lastSubmission.lessonTitle
+                });
+            }
+        } else {
+            // Fixed date range mode: use aggregation pipeline
+            const pipeline = [
+                { $match: { createdAt: { $gte: since, $lte: until } } },
+                {
+                    $addFields: {
+                        _day: {
+                            $dateToString: {
+                                format: '%Y-%m-%d',
+                                date: '$createdAt'
+                            }
                         }
                     }
-                }
-            },
-            { $sort: { createdAt: 1 } },
-            {
-                $group: {
-                    _id: {
-                        studentId: '$studentId',
-                        studentName: '$studentName'
-                    },
-                    entries: { $sum: 1 },
-                    activeDaysSet: { $addToSet: '$_day' },
-                    lastSeen: { $last: '$createdAt' },
-                    lastLessonId: { $last: '$lessonId' },
-                    lastLessonTitle: { $last: '$lessonTitle' }
-                }
-            },
-            {
-                $project: {
-                    _id: 0,
-                    studentId: '$_id.studentId',
-                    studentName: '$_id.studentName',
-                    entries: 1,
-                    activeDays: { $size: '$activeDaysSet' },
-                    lastSeen: 1,
-                    lastLessonId: 1,
-                    lastLessonTitle: 1
-                }
-            },
-            { $sort: { entries: -1, studentName: 1 } }
-        ];
+                },
+                { $sort: { createdAt: 1 } },
+                {
+                    $group: {
+                        _id: {
+                            studentId: '$studentId',
+                            studentName: '$studentName'
+                        },
+                        entries: { $sum: 1 },
+                        activeDaysSet: { $addToSet: '$_day' },
+                        lastSeen: { $last: '$createdAt' },
+                        lastLessonId: { $last: '$lessonId' },
+                        lastLessonTitle: { $last: '$lessonTitle' }
+                    }
+                },
+                {
+                    $project: {
+                        _id: 0,
+                        studentId: '$_id.studentId',
+                        studentName: '$_id.studentName',
+                        entries: 1,
+                        activeDays: { $size: '$activeDaysSet' },
+                        lastSeen: 1,
+                        lastLessonId: 1,
+                        lastLessonTitle: 1
+                    }
+                },
+                { $sort: { entries: -1, studentName: 1 } }
+            ];
 
-        const activityData = await coll.aggregate(pipeline).toArray();
+            activityData = await coll.aggregate(pipeline).toArray();
+        }
 
         // Create a map of activity data by studentId
         const activityMap = new Map(activityData.map((a) => [a.studentId, a]));
@@ -331,16 +389,24 @@ exports.handler = async (event) => {
 
         // Add pace calculations to each row
         const lessonsCollection = db.collection('lessons');
-        const courseLessons = await lessonsCollection
-            .find({ courseId: 'Web Development' })
-            .toArray();
+        // Fetch ALL lessons for all courses instead of just Web Development
+        const allCourseLessons = await lessonsCollection.find({}).toArray();
 
-        // Batch fetch all student data from MongoDB
+        // Batch fetch all student data from MongoDB (including profile pictures)
         const studentIds = rows.map((r) => r.studentId).filter(Boolean);
         const studentsData = await studentsColl
             .find({ studentId: { $in: studentIds } })
             .toArray();
         const studentsMap = new Map(studentsData.map((s) => [s.studentId, s]));
+
+        // Add profile picture URL to each row
+        rows = rows.map(row => {
+            const studentDoc = studentsMap.get(row.studentId);
+            return {
+                ...row,
+                profilePictureUrl: studentDoc?.profilePictureUrl || null
+            };
+        });
 
         for (const row of rows) {
             // Get all submitted lesson IDs for this student
@@ -348,6 +414,15 @@ exports.handler = async (event) => {
                 .find({ studentId: row.studentId })
                 .toArray();
             const submittedLessonIds = submissions.map((s) => s.lessonId);
+
+            // Get the student's course to filter lessons
+            const studentDoc = studentsMap.get(row.studentId);
+            const studentCourse = studentDoc?.course || 'Web Development';
+
+            // Filter lessons for this student's specific course
+            const courseLessons = allCourseLessons.filter(
+                (lesson) => lesson.courseId === studentCourse
+            );
 
             // Find current level (highest level with a submission) for ALL students
             if (courseLessons.length > 0 && submittedLessonIds.length > 0) {
@@ -431,7 +506,7 @@ exports.handler = async (event) => {
                 },
                 body: JSON.stringify({
                     windowDays: days,
-                    since: since.toISOString(),
+                    since: since ? since.toISOString() : null,
                     count: rows.length,
                     rows
                 })
@@ -442,11 +517,15 @@ exports.handler = async (event) => {
         if (wantsHtml(event)) {
             const html = renderHtml({
                 title: `Weekly Report (${
-                    days === 'all' ? 'All Time' : days + 'd'
+                    days === 'all'
+                        ? 'All Time'
+                        : days === 'fullPeriod'
+                        ? 'Full Period'
+                        : days + 'd'
                 })`,
                 days,
                 rows,
-                sinceIso: since.toISOString(),
+                sinceIso: since ? since.toISOString() : null,
                 untilIso: until.toISOString(),
                 startDate,
                 endDate,
@@ -474,7 +553,7 @@ exports.handler = async (event) => {
             },
             body: JSON.stringify({
                 windowDays: days,
-                since: since.toISOString(),
+                since: since ? since.toISOString() : null,
                 count: rows.length,
                 rows
             })
@@ -508,6 +587,8 @@ function renderHtml({
         ? `${startDate} to ${endDate}`
         : days === 'all'
         ? 'All Time'
+        : days === 'fullPeriod'
+        ? 'Full Enrollment Period'
         : `last ${days} days`;
 
     // Build filter params string for reuse
@@ -527,10 +608,11 @@ function renderHtml({
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>${escapeHtml(title)}</title>
+<link rel="stylesheet" href="/global.css">
 <link rel="preconnect" href="https://cdn.jsdelivr.net" />
 <style>
   :root { color-scheme: light; }
-  body { font: 14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; margin: 0; color: #111827; background: #f9fafb; }
+  body { font-family: var(--font-family-primary); font: 14px/1.45 var(--font-family-primary); margin: 0; color: #111827; background: #f9fafb; }
   .navbar { background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 0 2rem; display: flex; align-items: center; gap: 2rem; height: 64px; }
   .navbar-brand a { font-size: 1.5rem; font-weight: 600; color: #2d3748; text-decoration: none; }
   .navbar-brand a:hover { color: #4299e1; }
@@ -561,10 +643,13 @@ function renderHtml({
   input::placeholder { color: #9ca3af; }
   .wrap { display: grid; gap: 20px; grid-template-columns: minmax(260px,1fr); margin: 0 24px; }
   .student:hover {color: #2563eb; cursor: pointer; text-decoration: underline;}
+  .student-cell { display: flex; align-items: center; gap: 8px; }
+  .student-profile-pic { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+  .student-profile-placeholder { width: 32px; height: 32px; border-radius: 50%; background: #cbd5e0; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 16px; }
   @media (min-width: 900px) { .wrap { grid-template-columns: 1fr; } }
   canvas { width: 100%; height: 360px; }
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  th,td { padding:10px 8px; border-bottom:1px solid #e5e7eb; text-align:left; }
+  th,td { padding:20px 8px; border-bottom:1px solid #e5e7eb; text-align:left; }
   th { cursor:pointer; user-select:none; position:sticky; top:0; background:inherit; }
   tr:hover { background: rgba(0,0,0,0.03); }
   .mono { font-family: ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace; font-size:12px; }
@@ -607,46 +692,52 @@ function renderHtml({
 <body>
   <nav class="navbar">
     <div class="navbar-brand">
-      <a href="/">V School Dashboards</a>
+      <a href="/">LTP Reports</a>
     </div>
     <div class="navbar-menu">
       <a href="/" class="navbar-item">🏠 Home</a>
+      <a href="/dashboards.html" class="navbar-item">📊 Dashboards</a>
       <a href="/admin-users.html" class="navbar-item">👥 Users</a>
-      <a href="/.netlify/functions/report-weekly?view=html" class="navbar-item">📊 Weekly Report</a>
+      <a href="/.netlify/functions/report-weekly?view=html" class="navbar-item">📈 Weekly Report</a>
       <a href="/.netlify/functions/db-inspect?format=pretty" class="navbar-item">🔍 Database</a>
     </div>
   </nav>
   <div class="page-header">
     <h1>Student Pace — ${displayRange}</h1>
   </div>
-  <div class="muted" style="margin: 0 24px 16px;">${new Date(
+  <div class="muted" style="margin: 0 24px 16px;">${
       sinceIso
-  ).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-  })} - ${new Date(untilIso).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric'
-    })}
+          ? `${new Date(sinceIso).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            })} - ${new Date(untilIso).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            })}`
+          : `Individual enrollment periods through ${new Date(
+                untilIso
+            ).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            })}`
+  }
 
   <div class="wrap">
     <div class="card">
       <div class="controls">
         <span>Quick:</span>
         <a class="pill ${
+            !isCustomRange && days === 'fullPeriod' ? 'active' : ''
+        }" href="?view=html&days=fullPeriod${filterParams}">Full Period</a>
+        <a class="pill ${
             !isCustomRange && days === 7 ? 'active' : ''
         }" href="?view=html&days=7${filterParams}">7d</a>
         <a class="pill ${
             !isCustomRange && days === 30 ? 'active' : ''
         }" href="?view=html&days=30${filterParams}">30d</a>
-        <a class="pill ${
-            !isCustomRange && days === 180 ? 'active' : ''
-        }" href="?view=html&days=180${filterParams}">6m</a>
-        <a class="pill ${
-            !isCustomRange && days === 365 ? 'active' : ''
-        }" href="?view=html&days=365${filterParams}">1y</a>
         <a class="pill ${
             !isCustomRange && days === 'all' ? 'active' : ''
         }" href="?view=html&days=all${filterParams}">All Time</a>
@@ -679,21 +770,15 @@ function renderHtml({
             }>Utah Valley University</option>
           </select>
         </label>
-        <label>Activity Status:
+        <label>Student Status:
           <select id="activityFilter" class="date-input" style="width:160px">
             <option value="">All Students</option>
-            <option value="active" ${
-                activityFilter === 'active' ? 'selected' : ''
-            }>Active</option>
-            <option value="inactive" ${
-                activityFilter === 'inactive' ? 'selected' : ''
-            }>Inactive</option>
             <option value="current" ${
                 activityFilter === 'current' ? 'selected' : ''
-            }>Current Student</option>
+            }>Current</option>
             <option value="former" ${
                 activityFilter === 'former' ? 'selected' : ''
-            }>Former Student</option>
+            }>Former</option>
           </select>
         </label>
         <label>Start: <input type="date" id="startDate" class="date-input" value="${
@@ -834,7 +919,9 @@ function renderHtml({
     const IS_CUSTOM_RANGE = ${isCustomRange};
     const START_DATE = ${startDate ? `'${startDate}'` : 'null'};
     const END_DATE = ${endDate ? `'${endDate}'` : 'null'};
-    const DAYS = ${days === 'all' ? "'all'" : days};
+    const DAYS = ${
+        days === 'all' || days === 'fullPeriod' ? `'${days}'` : days
+    };
     const COURSE_FILTER = ${courseFilter ? `'${courseFilter}'` : 'null'};
     const INSTITUTION_FILTER = ${
         institutionFilter ? `'${institutionFilter}'` : 'null'
@@ -878,7 +965,7 @@ function renderHtml({
         url.searchParams.delete('startDate');
         url.searchParams.delete('endDate');
         url.searchParams.set('view', 'html');
-        url.searchParams.set('days', '7');
+        url.searchParams.set('days', 'fullPeriod');
         location.href = url.toString();
       });
     }
@@ -951,8 +1038,11 @@ function renderHtml({
         const paceClass = r.paceStatus ? 'pace-' + r.paceStatus : '';
         const paceDisplay = r.pace !== null && r.pace !== undefined ? r.pace : '—';
         const levelDisplay = r.currentLevel !== null && r.currentLevel !== undefined ? r.currentLevel : '—';
+        const profilePicHtml = r.profilePictureUrl
+          ? '<img src="' + r.profilePictureUrl + '" alt="' + escapeHtml(r.studentName||'') + '" class="student-profile-pic">'
+          : '<div class="student-profile-placeholder">👤</div>';
         html += '<tr class="' + paceClass + '" data-id="'+(r.studentId||'')+'" data-name="'+escapeHtml(r.studentName||'')+'">'
-          + '<td class="student">' + escapeHtml(r.studentName||'') + '</td>'
+          + '<td class="student"><div class="student-cell">' + profilePicHtml + '<span>' + escapeHtml(r.studentName||'') + '</span></div></td>'
           + '<td class="mono">' + levelDisplay + '</td>'
           + '<td class="mono">' + (r.entries ?? 0) + '</td>'
           + '<td class="mono">' + (r.activeDays ?? 0) + '</td>'
@@ -999,7 +1089,13 @@ function renderHtml({
       const studentName = tr.getAttribute('data-name') || '(unknown)';
       if (!studentId) return;
 
-      const rangeText = IS_CUSTOM_RANGE ? START_DATE + ' to ' + END_DATE : 'last ' + DAYS + ' days';
+      const rangeText = IS_CUSTOM_RANGE
+        ? START_DATE + ' to ' + END_DATE
+        : DAYS === 'fullPeriod'
+        ? 'Full Enrollment Period'
+        : DAYS === 'all'
+        ? 'All Time'
+        : 'last ' + DAYS + ' days';
       subtitle.textContent = studentName + ' — ' + rangeText;
       await openDetail(studentId, studentName);
     });
@@ -1026,8 +1122,14 @@ function renderHtml({
       let endpoint = '/.netlify/functions/report-student?studentId=' + encodeURIComponent(studentId) + '&format=json';
 
       if (IS_CUSTOM_RANGE && START_DATE && END_DATE) {
+        // Custom date range - apply to this student
         endpoint += '&startDate=' + encodeURIComponent(START_DATE) + '&endDate=' + encodeURIComponent(END_DATE);
+      } else if (DAYS === 'fullPeriod') {
+        // Full period mode - let report-student use the student's full enrollment period
+        // Don't pass days parameter, report-student will default to full enrollment period
+        endpoint += '&days=all';
       } else {
+        // Fixed days mode (7d, 30d, all)
         endpoint += '&days=' + encodeURIComponent(DAYS);
       }
 
@@ -1050,7 +1152,9 @@ function renderHtml({
 
       // Populate info cards
       document.getElementById('detail-attendance').textContent = attendanceText;
-      document.getElementById('detail-story-points').textContent = String(data?.totalEntries ?? 0) + ' points';
+      // Use actual story points if available, otherwise fall back to submission count
+      const storyPointsValue = data?.pace?.completedStoryPoints ?? data?.totalEntries ?? 0;
+      document.getElementById('detail-story-points').textContent = String(storyPointsValue) + ' points';
       document.getElementById('detail-course').textContent = data?.enrolledCourse || '—';
       document.getElementById('detail-institution').textContent = data?.enrollingInstitution || '—';
       document.getElementById('detail-mentor').textContent = data?.mentorName || '—';
@@ -1167,6 +1271,9 @@ function renderHtml({
       if (IS_CUSTOM_RANGE && START_DATE && END_DATE) {
         url.searchParams.set('startDate', START_DATE);
         url.searchParams.set('endDate', END_DATE);
+      } else if (DAYS === 'fullPeriod') {
+        // Full period mode - use 'all' for student page
+        url.searchParams.set('days', 'all');
       } else {
         url.searchParams.set('days', DAYS);
       }
@@ -1258,7 +1365,13 @@ function renderHtml({
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF();
 
-      const rangeText = IS_CUSTOM_RANGE ? START_DATE + ' to ' + END_DATE : 'last ' + DAYS + ' days';
+      const rangeText = IS_CUSTOM_RANGE
+        ? START_DATE + ' to ' + END_DATE
+        : DAYS === 'fullPeriod'
+        ? 'Full Enrollment Period'
+        : DAYS === 'all'
+        ? 'All Time'
+        : 'last ' + DAYS + ' days';
       doc.setFontSize(18);
       doc.text('Student Pace Report', 14, 20);
       doc.setFontSize(12);

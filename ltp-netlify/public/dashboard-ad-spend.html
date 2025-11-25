@@ -169,7 +169,14 @@
             border: 1px solid #e1e4e8;
             border-radius: 6px;
             padding: 1rem;
+            border-left: 4px solid #e1e4e8;
         }
+        /* Category-specific colors */
+        .metric-card.category-traffic { border-left-color: #4299e1; }
+        .metric-card.category-engagement { border-left-color: #805ad5; }
+        .metric-card.category-cost { border-left-color: #f56565; }
+        .metric-card.category-conversions { border-left-color: #48bb78; }
+        .metric-card.category-performance { border-left-color: #ed8936; }
         .metric-label {
             font-size: 0.75rem;
             color: #586069;
@@ -313,7 +320,20 @@
                                     <input type="date" id="custom-end-date">
                                 </div>
                             </div>
-                            <button class="apply-dates-btn" id="apply-custom-dates">Apply Custom Range</button>
+                            <div style="font-size: 0.75rem; color: #586069; margin-top: 0.5rem; font-style: italic;">
+                                Optional: Select custom comparison dates below
+                            </div>
+                            <div class="custom-date-inputs" style="margin-top: 0.5rem;">
+                                <div class="custom-date-input">
+                                    <label>Compare Start Date (Optional)</label>
+                                    <input type="date" id="comparison-start-date">
+                                </div>
+                                <div class="custom-date-input">
+                                    <label>Compare End Date (Optional)</label>
+                                    <input type="date" id="comparison-end-date">
+                                </div>
+                            </div>
+                            <button class="apply-dates-btn" id="apply-custom-dates" disabled>Apply Custom Range</button>
                         </div>
                     </div>
                 </div>
@@ -431,15 +451,28 @@
         }
 
         function calculateComparisonDates(startDate, endDate) {
-            const start = new Date(startDate);
-            const end = new Date(endDate);
-            const daysDiff = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+            // Parse as local dates to avoid timezone issues
+            const [startYear, startMonth, startDay] = startDate.split('-').map(Number);
+            const [endYear, endMonth, endDay] = endDate.split('-').map(Number);
 
+            const start = new Date(startYear, startMonth - 1, startDay);
+            const end = new Date(endYear, endMonth - 1, endDay);
+
+            // Normalize to midnight
+            start.setHours(0, 0, 0, 0);
+            end.setHours(0, 0, 0, 0);
+
+            // Calculate days difference (inclusive)
+            const millisDiff = end.getTime() - start.getTime();
+            const daysDiff = Math.round(millisDiff / (1000 * 60 * 60 * 24)) + 1;
+
+            // Comparison end date is one day before start date
             const comparisonEndDate = new Date(start);
             comparisonEndDate.setDate(comparisonEndDate.getDate() - 1);
 
+            // Comparison start date is daysDiff days before comparison end date
             const comparisonStartDate = new Date(comparisonEndDate);
-            comparisonStartDate.setDate(comparisonStartDate.getDate() - daysDiff + 1);
+            comparisonStartDate.setDate(comparisonStartDate.getDate() - (daysDiff - 1));
 
             return {
                 comparisonStartDate: formatDateForAPI(comparisonStartDate),
@@ -462,17 +495,26 @@
             });
         }
 
-        // Toggle dropdown
+        // Toggle dropdown - keeps dropdown open until Apply is clicked
         document.addEventListener('click', (e) => {
             const dropdown = document.getElementById('date-dropdown');
             const toggle = document.getElementById('date-selector-toggle');
 
+            // Check if click is on toggle area (but not inside dropdown)
             if (toggle && toggle.contains(e.target)) {
-                if (e.target.closest('.date-preset') || e.target.id === 'apply-custom-dates') {
-                    return; // Let preset/apply handlers run
+                // If clicking inside the dropdown (date inputs, labels, etc.), keep it open
+                if (dropdown && dropdown.contains(e.target)) {
+                    // Allow presets and apply button to handle their own closing
+                    if (e.target.closest('.date-preset') || e.target.id === 'apply-custom-dates') {
+                        return; // Let preset/apply handlers run and close
+                    }
+                    // Keep dropdown open for all other clicks inside (date inputs, labels, etc.)
+                    return;
                 }
+                // Clicking on the date selector toggle (outside dropdown)
                 dropdown.classList.toggle('active');
             } else {
+                // Clicking outside - close dropdown
                 dropdown.classList.remove('active');
             }
         });
@@ -494,17 +536,64 @@
             }
         });
 
-        // Handle custom date selection
-        document.getElementById('apply-custom-dates')?.addEventListener('click', () => {
+        // Enable/disable Apply button based on date selection
+        function validateCustomDates() {
+            const startDate = document.getElementById('custom-start-date').value;
+            const endDate = document.getElementById('custom-end-date').value;
+            const applyBtn = document.getElementById('apply-custom-dates');
+
+            if (startDate && endDate) {
+                applyBtn.disabled = false;
+            } else {
+                applyBtn.disabled = true;
+            }
+        }
+
+        // Add event listeners for date inputs to validate
+        document.getElementById('custom-start-date')?.addEventListener('change', validateCustomDates);
+        document.getElementById('custom-end-date')?.addEventListener('change', validateCustomDates);
+
+        // Handle custom date selection - only closes dropdown when both dates are selected
+        document.getElementById('apply-custom-dates')?.addEventListener('click', (e) => {
             const startDate = document.getElementById('custom-start-date').value;
             const endDate = document.getElementById('custom-end-date').value;
 
+            // Validate that both dates are selected (button should be disabled if not, but double-check)
             if (!startDate || !endDate) {
-                alert('Please select both start and end dates');
+                alert('Please select both start and end dates before applying');
+                e.stopPropagation(); // Prevent dropdown from closing
                 return;
             }
 
-            const comparison = calculateComparisonDates(startDate, endDate);
+            // Validate that end date is after or equal to start date
+            if (new Date(endDate) < new Date(startDate)) {
+                alert('End date must be after or equal to start date');
+                e.stopPropagation(); // Prevent dropdown from closing
+                return;
+            }
+
+            // Check if custom comparison dates are provided
+            const customComparisonStart = document.getElementById('comparison-start-date').value;
+            const customComparisonEnd = document.getElementById('comparison-end-date').value;
+
+            let comparison;
+            if (customComparisonStart && customComparisonEnd) {
+                // Validate comparison dates
+                if (new Date(customComparisonEnd) < new Date(customComparisonStart)) {
+                    alert('Comparison end date must be after or equal to comparison start date');
+                    e.stopPropagation(); // Prevent dropdown from closing
+                    return;
+                }
+                // Use custom comparison dates
+                comparison = {
+                    comparisonStartDate: customComparisonStart,
+                    comparisonEndDate: customComparisonEnd
+                };
+            } else {
+                // Auto-calculate comparison dates
+                comparison = calculateComparisonDates(startDate, endDate);
+            }
+
             currentDateRange = {
                 startDate,
                 endDate,
@@ -515,7 +604,7 @@
             // Clear preset active states
             document.querySelectorAll('.date-preset').forEach(p => p.classList.remove('active'));
 
-            // Close dropdown and reload
+            // Close dropdown and reload (only if validation passed)
             document.getElementById('date-dropdown').classList.remove('active');
             loadDashboard();
         });
@@ -576,6 +665,14 @@
                 if (!response.ok) throw new Error('Failed to load dashboard data');
 
                 dashboardData = await response.json();
+
+                // DEBUG: Log the full API response
+                console.log('=== DASHBOARD DATA ===');
+                console.log('Full response:', dashboardData);
+                console.log('Campaign breakdown:', dashboardData.campaignBreakdown);
+                console.log('General dailyData:', dashboardData.campaignBreakdown?.general?.dailyData);
+                console.log('======================');
+
                 renderDashboard();
 
                 loading.style.display = 'none';
@@ -587,7 +684,9 @@
         }
 
         function formatDate(dateStr) {
-            const date = new Date(dateStr);
+            // Parse YYYY-MM-DD as local date to avoid timezone shift
+            const [year, month, day] = dateStr.split('-').map(Number);
+            const date = new Date(year, month - 1, day);
             return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
         }
 
@@ -618,44 +717,62 @@
             const metrics = dashboardData.currentPeriod.metrics;
             const changes = dashboardData.wowChanges;
 
+            // Get campaign-specific metrics for breakdown
+            const interviewMetrics = dashboardData.campaignBreakdown?.interviews?.current || {};
+            const interviewChanges = dashboardData.campaignBreakdown?.interviews?.wowChanges || {};
+
             const keyMetricsHTML = `
-                <div class="metric-card">
+                <div class="metric-card category-traffic">
                     <div class="metric-label">Impr.</div>
                     <div class="metric-value">${metrics.impressions.toLocaleString()}</div>
                     <div class="metric-change ${parseFloat(changes.impressions) >= 0 ? 'positive' : 'negative'}">
                         ${parseFloat(changes.impressions) >= 0 ? '+' : ''}${changes.impressions}% WoW
                     </div>
                 </div>
-                <div class="metric-card">
+                <div class="metric-card category-traffic">
                     <div class="metric-label">Clicks</div>
                     <div class="metric-value">${metrics.clicks.toLocaleString()}</div>
                     <div class="metric-change ${parseFloat(changes.clicks) >= 0 ? 'positive' : 'negative'}">
                         ${parseFloat(changes.clicks) >= 0 ? '+' : ''}${changes.clicks}% WoW
                     </div>
                 </div>
-                <div class="metric-card">
+                <div class="metric-card category-cost">
                     <div class="metric-label">Cost</div>
                     <div class="metric-value">$${metrics.cost.toLocaleString()}</div>
-                    <div class="metric-change ${parseFloat(changes.cost) >= 0 ? 'negative' : 'positive'}">
+                    <div class="metric-change ${parseFloat(changes.cost) >= 0 ? 'positive' : 'negative'}">
                         ${parseFloat(changes.cost) >= 0 ? '+' : ''}${changes.cost}% WoW
                     </div>
                 </div>
-                <div class="metric-card">
+                <div class="metric-card category-conversions">
                     <div class="metric-label">Leads</div>
                     <div class="metric-value">${metrics.leads}</div>
                     <div class="metric-change ${parseFloat(changes.leads) >= 0 ? 'positive' : 'negative'}">
                         ${parseFloat(changes.leads) >= 0 ? '+' : ''}${changes.leads}% WoW
                     </div>
                 </div>
-                <div class="metric-card">
-                    <div class="metric-label">CVR</div>
+                <div class="metric-card category-performance">
+                    <div class="metric-label">Interview CVR</div>
+                    <div class="metric-value">${interviewMetrics.cvr || metrics.cvr}%</div>
+                    <div class="metric-change ${parseFloat(interviewChanges.cvr || changes.cvr) >= 0 ? 'positive' : 'negative'}">
+                        ${parseFloat(interviewChanges.cvr || changes.cvr) >= 0 ? '+' : ''}${interviewChanges.cvr || changes.cvr}% WoW
+                    </div>
+                </div>
+                <div class="metric-card category-performance">
+                    <div class="metric-label">Interview CPA</div>
+                    <div class="metric-value">$${interviewMetrics.cpa || metrics.cpa}</div>
+                    <div class="metric-change ${parseFloat(interviewChanges.cpa || changes.cpa) >= 0 ? 'negative' : 'positive'}">
+                        ${parseFloat(interviewChanges.cpa || changes.cpa) >= 0 ? '+' : ''}${interviewChanges.cpa || changes.cpa}% WoW
+                    </div>
+                </div>
+                <div class="metric-card category-performance">
+                    <div class="metric-label">Total CVR</div>
                     <div class="metric-value">${metrics.cvr}%</div>
                     <div class="metric-change ${parseFloat(changes.cvr) >= 0 ? 'positive' : 'negative'}">
                         ${parseFloat(changes.cvr) >= 0 ? '+' : ''}${changes.cvr}% WoW
                     </div>
                 </div>
-                <div class="metric-card">
-                    <div class="metric-label">CPA</div>
+                <div class="metric-card category-performance">
+                    <div class="metric-label">Total CPA</div>
                     <div class="metric-value">$${metrics.cpa}</div>
                     <div class="metric-change ${parseFloat(changes.cpa) >= 0 ? 'negative' : 'positive'}">
                         ${parseFloat(changes.cpa) >= 0 ? '+' : ''}${changes.cpa}% WoW
@@ -671,59 +788,176 @@
             const metrics = campaign.current;
             const changes = campaign.wowChanges;
 
-            // Render metrics bar
-            const metricsHTML = `
-                <div class="section-metric">
-                    <div class="section-metric-label">Cost</div>
-                    <div class="section-metric-value">
-                        $${metrics.cost.toLocaleString()}
-                        <span class="section-metric-change ${parseFloat(changes.cost) >= 0 ? 'negative' : 'positive'}">
-                            ${parseFloat(changes.cost) >= 0 ? '+' : ''}${changes.cost}%
-                        </span>
+            // Get total metrics (all conversions)
+            const totalMetrics = dashboardData.currentPeriod.metrics;
+            const totalChanges = dashboardData.wowChanges;
+
+            // For "general" (Overall Performance), only show Total CVR/CPA
+            // For specific sections (Interviews/Contacts), show both section-specific and Total
+            let metricsHTML = '';
+
+            if (campaignType === 'general') {
+                // Overall Performance: Only show Cost, Leads, Total CVR, Total CPA
+                metricsHTML = `
+                    <div class="section-metric">
+                        <div class="section-metric-label">Cost</div>
+                        <div class="section-metric-value">
+                            $${metrics.cost.toLocaleString()}
+                            <span class="section-metric-change ${parseFloat(changes.cost) >= 0 ? 'positive' : 'negative'}">
+                                ${parseFloat(changes.cost) >= 0 ? '+' : ''}${changes.cost}%
+                            </span>
+                        </div>
                     </div>
-                </div>
-                <div class="section-metric">
-                    <div class="section-metric-label">Leads</div>
-                    <div class="section-metric-value">
-                        ${metrics.leads}
-                        <span class="section-metric-change ${parseFloat(changes.leads) >= 0 ? 'positive' : 'negative'}">
-                            ${parseFloat(changes.leads) >= 0 ? '+' : ''}${changes.leads}%
-                        </span>
+                    <div class="section-metric">
+                        <div class="section-metric-label">Leads</div>
+                        <div class="section-metric-value">
+                            ${metrics.leads}
+                            <span class="section-metric-change ${parseFloat(changes.leads) >= 0 ? 'positive' : 'negative'}">
+                                ${parseFloat(changes.leads) >= 0 ? '+' : ''}${changes.leads}%
+                            </span>
+                        </div>
                     </div>
-                </div>
-                <div class="section-metric">
-                    <div class="section-metric-label">CVR</div>
-                    <div class="section-metric-value">
-                        ${metrics.cvr}%
-                        <span class="section-metric-change ${parseFloat(changes.cvr) >= 0 ? 'positive' : 'negative'}">
-                            ${parseFloat(changes.cvr) >= 0 ? '+' : ''}${changes.cvr}%
-                        </span>
+                    <div class="section-metric">
+                        <div class="section-metric-label">Total CVR</div>
+                        <div class="section-metric-value">
+                            ${totalMetrics.cvr}%
+                            <span class="section-metric-change ${parseFloat(totalChanges.cvr) >= 0 ? 'positive' : 'negative'}">
+                                ${parseFloat(totalChanges.cvr) >= 0 ? '+' : ''}${totalChanges.cvr}%
+                            </span>
+                        </div>
                     </div>
-                </div>
-                <div class="section-metric">
-                    <div class="section-metric-label">CPA</div>
-                    <div class="section-metric-value">
-                        $${metrics.cpa}
-                        <span class="section-metric-change ${parseFloat(changes.cpa) >= 0 ? 'negative' : 'positive'}">
-                            ${parseFloat(changes.cpa) >= 0 ? '+' : ''}${changes.cpa}%
-                        </span>
+                    <div class="section-metric">
+                        <div class="section-metric-label">Total CPA</div>
+                        <div class="section-metric-value">
+                            $${totalMetrics.cpa}
+                            <span class="section-metric-change ${parseFloat(totalChanges.cpa) >= 0 ? 'negative' : 'positive'}">
+                                ${parseFloat(totalChanges.cpa) >= 0 ? '+' : ''}${totalChanges.cpa}%
+                            </span>
+                        </div>
                     </div>
-                </div>
-            `;
+                `;
+            } else {
+                // Interviews/Contacts: Show section-specific CVR/CPA AND Total CVR/CPA
+                metricsHTML = `
+                    <div class="section-metric">
+                        <div class="section-metric-label">Cost</div>
+                        <div class="section-metric-value">
+                            $${metrics.cost.toLocaleString()}
+                            <span class="section-metric-change ${parseFloat(changes.cost) >= 0 ? 'positive' : 'negative'}">
+                                ${parseFloat(changes.cost) >= 0 ? '+' : ''}${changes.cost}%
+                            </span>
+                        </div>
+                    </div>
+                    <div class="section-metric">
+                        <div class="section-metric-label">Leads</div>
+                        <div class="section-metric-value">
+                            ${metrics.leads}
+                            <span class="section-metric-change ${parseFloat(changes.leads) >= 0 ? 'positive' : 'negative'}">
+                                ${parseFloat(changes.leads) >= 0 ? '+' : ''}${changes.leads}%
+                            </span>
+                        </div>
+                    </div>
+                    <div class="section-metric">
+                        <div class="section-metric-label">CVR</div>
+                        <div class="section-metric-value">
+                            ${metrics.cvr}%
+                            <span class="section-metric-change ${parseFloat(changes.cvr) >= 0 ? 'positive' : 'negative'}">
+                                ${parseFloat(changes.cvr) >= 0 ? '+' : ''}${changes.cvr}%
+                            </span>
+                        </div>
+                    </div>
+                    <div class="section-metric">
+                        <div class="section-metric-label">CPA</div>
+                        <div class="section-metric-value">
+                            $${metrics.cpa}
+                            <span class="section-metric-change ${parseFloat(changes.cpa) >= 0 ? 'negative' : 'positive'}">
+                                ${parseFloat(changes.cpa) >= 0 ? '+' : ''}${changes.cpa}%
+                            </span>
+                        </div>
+                    </div>
+                    <div class="section-metric">
+                        <div class="section-metric-label">Total CVR</div>
+                        <div class="section-metric-value">
+                            ${totalMetrics.cvr}%
+                            <span class="section-metric-change ${parseFloat(totalChanges.cvr) >= 0 ? 'positive' : 'negative'}">
+                                ${parseFloat(totalChanges.cvr) >= 0 ? '+' : ''}${totalChanges.cvr}%
+                            </span>
+                        </div>
+                    </div>
+                    <div class="section-metric">
+                        <div class="section-metric-label">Total CPA</div>
+                        <div class="section-metric-value">
+                            $${totalMetrics.cpa}
+                            <span class="section-metric-change ${parseFloat(totalChanges.cpa) >= 0 ? 'negative' : 'positive'}">
+                                ${parseFloat(totalChanges.cpa) >= 0 ? '+' : ''}${totalChanges.cpa}%
+                            </span>
+                        </div>
+                    </div>
+                `;
+            }
 
             document.getElementById(metricsId).innerHTML = metricsHTML;
 
-            // Render chart
-            renderSectionChart(chartId, campaign.dailyData);
+            // Render chart with category-specific colors
+            renderSectionChart(chartId, campaign.dailyData, campaignType);
         }
 
-        function renderSectionChart(canvasId, dailyData) {
+        function renderSectionChart(canvasId, dailyData, campaignType) {
             const ctx = document.getElementById(canvasId);
             if (charts[canvasId]) charts[canvasId].destroy();
 
-            const labels = dailyData.map(d => formatDate(d.date));
-            const data1 = dailyData.map(d => d.metric1);
-            const data2 = dailyData.map(d => d.metric2);
+            // DEBUG: Log the data structure
+            console.log(`[${canvasId}] Daily data structure:`, dailyData);
+            console.log(`[${canvasId}] Has current?`, dailyData.current !== undefined);
+            console.log(`[${canvasId}] Has comparison?`, dailyData.comparison !== undefined);
+
+            // Helper function to abbreviate numbers
+            function abbreviateNumber(value) {
+                if (value >= 1000000) {
+                    return (value / 1000000).toFixed(1) + 'M';
+                } else if (value >= 1000) {
+                    return (value / 1000).toFixed(1) + 'k';
+                }
+                return value.toFixed(0);
+            }
+
+            // Extract data for chart
+            const currentDailyData = dailyData.current || dailyData;
+            const comparisonDailyData = dailyData.comparison || dailyData;
+
+            // Get metric data (assuming metric1 is the primary metric for this chart)
+            let currentData = currentDailyData.map(d => d.metric1);
+            let comparisonData = comparisonDailyData.map(d => d.metric1 || d.metric2);
+
+            // DEBUG: Log the extracted data
+            console.log(`[${canvasId}] Current data (before padding):`, currentData);
+            console.log(`[${canvasId}] Comparison data (before padding):`, comparisonData);
+
+            // Store original dates for tooltip
+            let currentDates = currentDailyData.map(d => d.date);
+            let comparisonDates = comparisonDailyData.map(d => d.date);
+
+            // Ensure both arrays are the same length by padding with nulls
+            const maxLength = Math.max(currentData.length, comparisonData.length);
+
+            // Pad comparison data to match current data length (add nulls at the end)
+            while (comparisonData.length < maxLength) {
+                comparisonData.push(null);
+                comparisonDates.push(null);
+            }
+
+            // Pad current data to match comparison data length (add nulls at the end)
+            while (currentData.length < maxLength) {
+                currentData.push(null);
+                currentDates.push(null);
+            }
+
+            console.log(`[${canvasId}] Current data (after padding):`, currentData);
+            console.log(`[${canvasId}] Comparison data (after padding):`, comparisonData);
+
+            // Create x-axis labels as "Day 1", "Day 2", etc.
+            const numDays = maxLength;
+            const labels = Array.from({ length: numDays }, (_, i) => `Day ${i + 1}`);
 
             charts[canvasId] = new Chart(ctx, {
                 type: 'line',
@@ -731,24 +965,28 @@
                     labels: labels,
                     datasets: [
                         {
-                            label: 'Metric 1',
-                            data: data1,
-                            borderColor: '#0366d6',
-                            backgroundColor: 'rgba(3, 102, 214, 0.1)',
+                            label: 'Current Range',
+                            data: currentData,
+                            borderColor: '#4299e1',  // Blue for current
+                            backgroundColor: 'rgba(66, 153, 225, 0.1)',
                             tension: 0.4,
                             borderWidth: 2,
                             pointRadius: 3,
-                            pointHoverRadius: 5
+                            pointHoverRadius: 5,
+                            spanGaps: false,  // Don't connect points across null values
+                            dates: currentDates  // Store dates for tooltip
                         },
                         {
-                            label: 'Metric 2',
-                            data: data2,
-                            borderColor: '#f66a0a',
-                            backgroundColor: 'rgba(246, 106, 10, 0.1)',
+                            label: 'Comparison Range',
+                            data: comparisonData,
+                            borderColor: '#ed8936',  // Orange for comparison
+                            backgroundColor: 'rgba(237, 137, 54, 0.1)',
                             tension: 0.4,
                             borderWidth: 2,
                             pointRadius: 3,
-                            pointHoverRadius: 5
+                            pointHoverRadius: 5,
+                            spanGaps: false,  // Don't connect points across null values
+                            dates: comparisonDates  // Store dates for tooltip
                         }
                     ]
                 },
@@ -757,7 +995,59 @@
                     maintainAspectRatio: false,
                     interaction: { mode: 'index', intersect: false },
                     plugins: {
-                        legend: { display: false }
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            align: 'end',
+                            labels: {
+                                boxWidth: 12,
+                                font: { size: 11 },
+                                color: '#586069',
+                                padding: 10
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            padding: 12,
+                            titleFont: { size: 12, weight: 'bold' },
+                            bodyFont: { size: 11 },
+                            bodySpacing: 4,
+                            callbacks: {
+                                title: function(context) {
+                                    // Show "Day X" as the title
+                                    const index = context[0].dataIndex;
+                                    return `Day ${index + 1}`;
+                                },
+                                label: function(context) {
+                                    const dataset = context.dataset;
+                                    const value = context.parsed.y;
+                                    const dateStr = dataset.dates[context.dataIndex];
+                                    const seriesLabel = dataset.label; // "Current Range" or "Comparison Range"
+
+                                    // Skip if this data point is null (padded)
+                                    if (value === null || dateStr === null) {
+                                        return null; // Don't show this series in the tooltip
+                                    }
+
+                                    const date = formatDate(dateStr);
+
+                                    // Format value based on metric type
+                                    let formattedValue;
+                                    if (value < 1 && value > 0) {
+                                        // Likely a percentage (CVR)
+                                        formattedValue = value.toFixed(2) + '%';
+                                    } else if (canvasId.includes('cost')) {
+                                        // Cost metric
+                                        formattedValue = '$' + abbreviateNumber(value);
+                                    } else {
+                                        // Other metrics (impressions, clicks, leads)
+                                        formattedValue = abbreviateNumber(value);
+                                    }
+
+                                    return `${date} (${seriesLabel}): ${formattedValue}`;
+                                }
+                            }
+                        }
                     },
                     scales: {
                         x: {
@@ -767,7 +1057,19 @@
                         y: {
                             beginAtZero: true,
                             grid: { color: '#e1e4e8', drawBorder: false },
-                            ticks: { color: '#586069', font: { size: 11 } }
+                            ticks: {
+                                color: '#586069',
+                                font: { size: 11 },
+                                callback: function(value) {
+                                    // Format y-axis labels
+                                    if (value < 1 && value > 0) {
+                                        return value.toFixed(1) + '%';
+                                    } else if (value >= 1000) {
+                                        return abbreviateNumber(value);
+                                    }
+                                    return value;
+                                }
+                            }
                         }
                     }
                 }

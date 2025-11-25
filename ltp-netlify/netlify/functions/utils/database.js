@@ -84,9 +84,33 @@ async function createLessonFeedbackIndexes(db) {
     }
 }
 
+/**
+ * Create indexes on student_pipeline collection
+ * Safe to call multiple times - will not recreate existing indexes
+ * @param {Db} db - MongoDB database instance
+ */
+async function createStudentPipelineIndexes(db) {
+    try {
+        await db.collection('student_pipeline').createIndexes([
+            { key: { student_id: 1 }, name: 'student_id_unique', unique: true },
+            { key: { airtable_record_id: 1 }, name: 'airtable_record_id_idx' },
+            { key: { email: 1 }, name: 'email_idx' },
+            { key: { current_admissions_status: 1 }, name: 'admissions_status_idx' },
+            { key: { current_foundations_status: 1 }, name: 'foundations_status_idx' },
+            { key: { current_new_student_status: 1 }, name: 'new_student_status_idx' },
+            { key: { program: 1 }, name: 'program_idx' },
+            { key: { lead_source: 1 }, name: 'lead_source_idx' },
+            { key: { created_at: -1 }, name: 'created_at_desc' },
+            { key: { updated_at: -1 }, name: 'updated_at_desc' }
+        ]);
+    } catch (e) {
+    }
+}
+
 module.exports = {
     getDb,
     createLessonEntryIndexes,
     createStudentIndexes,
-    createLessonFeedbackIndexes
+    createLessonFeedbackIndexes,
+    createStudentPipelineIndexes
 };

@@ -1,0 +1,1443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Education Dashboard | LTP Reports</title>
+    <link rel="stylesheet" href="/global.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="/navbar.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-family-primary);
+            background: #e5e5e5;
+            color: #1a1a1a;
+            line-height: 1.6;
+        }
+
+        /* Navbar */
+        .navbar {
+            background: white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            padding: 0 2rem;
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+            height: 64px;
+        }
+
+        .navbar-brand a {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #2d3748;
+            text-decoration: none;
+        }
+
+        .navbar-brand a:hover {
+            color: #4299e1;
+        }
+
+        .navbar-menu {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex: 1;
+        }
+
+        .navbar-item {
+            padding: 0.5rem 1rem;
+            color: #4a5568;
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 500;
+            border-radius: 0.375rem;
+            transition: all 0.2s;
+        }
+
+        .navbar-item:hover {
+            background: #f7fafc;
+            color: #4299e1;
+        }
+
+        /* Container */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+
+        /* Header */
+        .page-header {
+            margin-bottom: 1.5rem;
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .page-header h1 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 0.25rem;
+        }
+
+        .debug-btn {
+            background: #f59e0b;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 0.813rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .debug-btn:hover {
+            background: #d97706;
+        }
+
+        .page-header p {
+            color: #666;
+            font-size: 0.875rem;
+        }
+
+        /* Filter Bar */
+        .filter-bar {
+            background: white;
+            border-radius: 8px;
+            padding: 1.25rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+        }
+
+        .filter-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            align-items: end;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .filter-group select,
+        .filter-group input {
+            padding: 0.625rem 0.875rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            background: white;
+            color: #2d3748;
+            cursor: pointer;
+            transition: border-color 0.2s;
+            width: 100%;
+        }
+
+        .filter-group select:hover,
+        .filter-group input:hover {
+            border-color: #cbd5e0;
+        }
+
+        .filter-group select:focus,
+        .filter-group input:focus {
+            outline: none;
+            border-color: #4299e1;
+        }
+
+        .btn {
+            padding: 0.625rem 1.25rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: #4299e1;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #3182ce;
+        }
+
+        .btn-secondary {
+            background: white;
+            color: #4a5568;
+            border: 1px solid #e2e8f0;
+        }
+
+        .btn-secondary:hover {
+            background: #f7fafc;
+        }
+
+        /* Section */
+        .section {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+        }
+
+        .section-header {
+            margin-bottom: 1.25rem;
+        }
+
+        .section-header h2 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 0;
+        }
+
+        .section-header p {
+            color: #666;
+            font-size: 0.75rem;
+        }
+
+        /* Cards Grid */
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0.75rem;
+            margin-bottom: 0;
+        }
+
+        .metric-card {
+            background: #f5f5f5;
+            border-radius: 6px;
+            padding: 1.25rem;
+            text-align: center;
+            transition: transform 0.15s, box-shadow 0.15s;
+            cursor: pointer;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+
+        .metric-card:active {
+            transform: translateY(-1px);
+        }
+
+        .metric-card.total {
+            background: #b4b0e8;
+            color: white;
+        }
+
+        .metric-label {
+            font-size: 0.813rem;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 0.5rem;
+            line-height: 1.3;
+        }
+
+        .metric-card.total .metric-label {
+            color: white;
+        }
+
+        .metric-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            line-height: 1;
+            color: #1a1a1a;
+        }
+
+        .metric-card.total .metric-value {
+            color: white;
+        }
+
+        .metric-percentage {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-left: 0.25rem;
+        }
+
+        .metric-card.total .metric-percentage {
+            color: white;
+        }
+
+        .metric-card.total:hover {
+            background: #a5a1d8;
+        }
+
+        /* Modal */
+        .modal-backdrop {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .modal-backdrop.active {
+            display: flex;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 8px;
+            max-width: 900px;
+            width: 100%;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+
+        .modal-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #1a1a1a;
+        }
+
+        .modal-subtitle {
+            font-size: 0.875rem;
+            color: #666;
+            margin-top: 0.25rem;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #666;
+            padding: 0.25rem 0.5rem;
+            line-height: 1;
+            border-radius: 4px;
+            transition: background 0.15s;
+        }
+
+        .modal-close:hover {
+            background: #f5f5f5;
+            color: #1a1a1a;
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+            overflow-y: auto;
+        }
+
+        .modal-search {
+            margin-bottom: 1rem;
+        }
+
+        .modal-search input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 0.875rem;
+        }
+
+        .modal-search input:focus {
+            outline: none;
+            border-color: #7c77c9;
+        }
+
+        .student-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 0.75rem;
+        }
+
+        .modal-student-card {
+            background: #f5f5f5;
+            padding: 1rem;
+            border-radius: 6px;
+            transition: background 0.15s;
+            display: flex;
+            gap: 0.75rem;
+            align-items: start;
+        }
+
+        .modal-student-card:hover {
+            background: #e8e8e8;
+        }
+
+        .student-profile-pic {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #cbd5e0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            overflow: hidden;
+            font-size: 1.25rem;
+        }
+
+        .student-profile-pic img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .modal-student-details {
+            flex: 1;
+        }
+
+        .modal-student-name {
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 0.25rem;
+            font-size: 0.875rem;
+        }
+
+        .modal-student-info {
+            font-size: 0.75rem;
+            color: #666;
+            line-height: 1.4;
+        }
+
+        .modal-student-info div {
+            margin-bottom: 0.125rem;
+        }
+
+        .modal-footer {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid #e0e0e0;
+            text-align: right;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: #999;
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .card-items {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .card-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #f7fafc;
+        }
+
+        .card-item:last-child {
+            border-bottom: none;
+        }
+
+        .card-item-label {
+            font-size: 0.875rem;
+            color: #4a5568;
+            font-weight: 500;
+        }
+
+        .card-item-value {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #1a202c;
+        }
+
+        .card-item-badge {
+            background: #edf2f7;
+            color: #2d3748;
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        /* Pace Columns */
+        .pace-columns {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .pace-column {
+            background: #f5f5f5;
+            border-radius: 6px;
+            padding: 1rem;
+        }
+
+        .pace-column-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .pace-column-title {
+            font-size: 0.875rem;
+            font-weight: 700;
+            color: #1a1a1a;
+        }
+
+        .pace-column-count {
+            font-size: 0.875rem;
+            font-weight: 700;
+            color: #666;
+        }
+
+        .student-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .student-item {
+            padding: 0.5rem;
+            margin-bottom: 0.25rem;
+            background: white;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            color: #1a1a1a;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .student-item:hover {
+            background: #eee;
+        }
+
+        .student-name {
+            font-weight: 600;
+            margin-bottom: 0.125rem;
+        }
+
+        .student-meta {
+            color: #666;
+            font-size: 0.688rem;
+        }
+
+        /* Gauges */
+        .gauges-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 2rem;
+            margin-top: 1.5rem;
+        }
+
+        .gauge-card {
+            text-align: center;
+        }
+
+        .gauge-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 1rem;
+        }
+
+        .gauge-container {
+            position: relative;
+            width: 220px;
+            height: 220px;
+            margin: 0 auto 1rem;
+        }
+
+        .gauge-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 0.25rem;
+        }
+
+        .gauge-label {
+            font-size: 0.875rem;
+            color: #666;
+            font-weight: 500;
+        }
+
+        .gauge-scale {
+            display: flex;
+            justify-content: space-between;
+            width: 220px;
+            margin: 0 auto;
+            font-size: 0.75rem;
+            color: #666;
+            font-weight: 600;
+        }
+
+        /* Loading */
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            color: #718096;
+        }
+
+        .spinner {
+            border: 4px solid #f3f4f6;
+            border-top: 4px solid #4299e1;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Responsive */
+        /* Scrollbar styling */
+        .student-list::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .student-list::-webkit-scrollbar-track {
+            background: #e0e0e0;
+            border-radius: 3px;
+        }
+
+        .student-list::-webkit-scrollbar-thumb {
+            background: #999;
+            border-radius: 3px;
+        }
+
+        .student-list::-webkit-scrollbar-thumb:hover {
+            background: #666;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            .filter-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .cards-grid {
+                grid-template-columns: 1fr !important;
+            }
+
+            .pace-columns {
+                grid-template-columns: 1fr;
+            }
+
+            .gauges-grid {
+                grid-template-columns: 1fr;
+                gap: 2rem;
+            }
+
+            .metric-value {
+                font-size: 2rem;
+            }
+        }
+
+        @media (min-width: 769px) and (max-width: 1024px) {
+            .cards-grid {
+                grid-template-columns: repeat(2, 1fr) !important;
+            }
+
+            .pace-columns {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <div id="navbar-container"></div>
+
+    <!-- Main Content -->
+    <div class="container">
+        <!-- Header -->
+        <div class="page-header">
+            <h1>Education Dashboard</h1>
+            <button class="debug-btn" onclick="showDebugInfo()">🐛 Debug Unknown Students</button>
+        </div>
+
+        <!-- Filter Bar -->
+        <div class="filter-bar">
+            <div class="filter-grid">
+                <div class="filter-group">
+                    <select id="weeksFilter">
+                        <option value="">Select Dates</option>
+                        <option value="4" selected>Last 4 Weeks</option>
+                        <option value="2">Last 2 Weeks</option>
+                        <option value="8">Last 8 Weeks</option>
+                        <option value="12">Last 12 Weeks</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <select id="courseFilter">
+                        <option value="">Instructor/Course</option>
+                        <option value="Cybersecurity">Cybersecurity</option>
+                        <option value="Web Development">Web Development</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <select id="institutionFilter">
+                        <option value="">Enrolling Institution</option>
+                        <option value="V School">V School</option>
+                        <option value="Millersville">Millersville University</option>
+                        <option value="TTU">Texas Tech University</option>
+                        <option value="UVU">Utah Valley University</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <select id="statusFilter">
+                        <option value="">Student Status</option>
+                        <option value="current">Current Students</option>
+                        <option value="former">Former Students</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <button class="btn btn-secondary" onclick="clearFilters()" style="white-space: nowrap;">× Clear All Filters</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loadingState" class="loading">
+            <div class="spinner"></div>
+            <p>Loading dashboard data...</p>
+        </div>
+
+        <!-- Dashboard Content -->
+        <div id="dashboardContent" style="display: none;">
+            <!-- Section 1: All Students -->
+            <div class="section">
+                <div class="section-header">
+                    <h2>All Students</h2>
+                </div>
+
+                <!-- Course Enrollment -->
+                <div class="cards-grid" id="enrollmentCards">
+                    <!-- Course enrollment will be inserted here -->
+                </div>
+
+                <!-- Institution Breakdown -->
+                <div class="cards-grid" id="institutionCards" style="margin-top: 0.75rem;">
+                    <!-- Institution cards will be inserted here -->
+                </div>
+            </div>
+
+            <!-- Section 2: Progress -->
+            <div class="section">
+                <div class="section-header">
+                    <h2>Progress</h2>
+                </div>
+
+                <!-- Progress Metrics Row 1 -->
+                <div class="cards-grid" id="progressCards" style="grid-template-columns: repeat(3, 1fr);">
+                    <!-- Progress cards will be inserted here -->
+                </div>
+
+                <!-- Progress Metrics Row 2 -->
+                <div class="cards-grid" id="attendanceCards" style="margin-top: 0.75rem; grid-template-columns: repeat(3, 1fr);">
+                    <!-- Attendance cards will be inserted here -->
+                </div>
+            </div>
+
+            <!-- Section 3: Student Pace -->
+            <div class="section">
+                <div class="section-header">
+                    <h2>Student Pace: Past 4 Weeks</h2>
+                </div>
+
+                <!-- Pace Metrics -->
+                <div class="pace-columns" id="paceColumns">
+                    <!-- Pace columns will be inserted here -->
+                </div>
+
+                <!-- Gauges -->
+                <div class="gauges-grid" id="gaugesGrid">
+                    <!-- Gauges will be inserted here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Student List Modal -->
+    <div id="studentModal" class="modal-backdrop">
+        <div class="modal">
+            <div class="modal-header">
+                <div>
+                    <div class="modal-title" id="modalTitle">Students</div>
+                    <div class="modal-subtitle" id="modalSubtitle"></div>
+                </div>
+                <button class="modal-close" onclick="closeStudentModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-search">
+                    <input type="text" id="modalSearch" placeholder="Search students by name, course, or institution...">
+                </div>
+                <div id="modalContent"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeStudentModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let dashboardData = null;
+        let currentUser = null;
+        let allStudentMetrics = [];
+        let currentModalStudents = [];
+        let modalSearchQuery = '';
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuth();
+
+            // Auto-apply filters on change
+            const filters = ['weeksFilter', 'courseFilter', 'institutionFilter', 'statusFilter'];
+            filters.forEach(filterId => {
+                const element = document.getElementById(filterId);
+                if (element) {
+                    element.addEventListener('change', () => loadDashboard());
+                }
+            });
+        });
+
+        async function checkAuth() {
+            const token = localStorage.getItem('auth_token');
+
+            if (!token) {
+                window.location.href = '/login.html';
+                return;
+            }
+
+            try {
+                const response = await fetch('/.netlify/functions/auth-me', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Not authenticated');
+                }
+
+                const data = await response.json();
+
+                if (!data.authenticated) {
+                    throw new Error('Not authenticated');
+                }
+
+                // Check if user is admin
+                if (data.user.role !== 'admin' && data.user.role !== 'superadmin') {
+                    alert('Access denied. Admin privileges required.');
+                    window.location.href = '/';
+                    return;
+                }
+
+                currentUser = data.user;
+
+                // Render navbar
+                const navbarContainer = document.getElementById('navbar-container');
+                navbarContainer.innerHTML = getNavbarHTML(data.user);
+
+                // Load dashboard data
+                loadDashboard();
+            } catch (err) {
+                console.error('Auth check failed:', err);
+                localStorage.removeItem('auth_token');
+                localStorage.removeItem('user');
+                window.location.href = '/login.html';
+            }
+        }
+
+        async function handleLogout() {
+            const token = localStorage.getItem('auth_token');
+
+            await fetch('/.netlify/functions/auth-logout', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('user');
+            window.location.href = '/login.html';
+        }
+
+        async function loadDashboard() {
+            try {
+                document.getElementById('loadingState').style.display = 'block';
+                document.getElementById('dashboardContent').style.display = 'none';
+
+                const params = new URLSearchParams();
+                const weeks = document.getElementById('weeksFilter').value;
+                const course = document.getElementById('courseFilter').value;
+                const institution = document.getElementById('institutionFilter').value;
+                const status = document.getElementById('statusFilter').value;
+
+                if (weeks) params.append('weeks', weeks);
+                if (course) params.append('course', course);
+                if (institution) params.append('institution', institution);
+                if (status) params.append('status', status);
+
+                const token = localStorage.getItem('auth_token');
+                const response = await fetch(`/.netlify/functions/dashboard-education?${params.toString()}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    console.error('API Error Response:', errorData);
+                    throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                dashboardData = await response.json();
+                console.log('Dashboard data loaded successfully:', dashboardData);
+
+                // Fetch detailed student metrics for modal
+                await fetchAllStudentMetrics();
+
+                renderDashboard(dashboardData);
+
+                document.getElementById('loadingState').style.display = 'none';
+                document.getElementById('dashboardContent').style.display = 'block';
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+
+                // Try to parse the error response
+                let errorMessage = 'Error loading dashboard. Please try again.';
+                if (error.message) {
+                    errorMessage += '<br><br><strong>Error:</strong> ' + error.message;
+                }
+
+                document.getElementById('loadingState').innerHTML = `
+                    <div style="padding: 2rem; text-align: left;">
+                        <h3 style="color: #dc2626; margin-bottom: 1rem;">Error Loading Dashboard</h3>
+                        <p>${errorMessage}</p>
+                        <button class="btn btn-primary" onclick="location.reload()" style="margin-top: 1rem;">Reload Page</button>
+                        <p style="margin-top: 1rem; font-size: 0.875rem; color: #666;">Check the browser console (F12) for more details.</p>
+                    </div>
+                `;
+            }
+        }
+
+        function renderDashboard(data) {
+            renderEnrollmentCards(data);
+            renderInstitutionCards(data);
+            renderProgressCards(data);
+            renderAttendanceCards(data);
+            renderPaceColumns(data);
+            renderGauges(data);
+        }
+
+        function renderEnrollmentCards(data) {
+            const container = document.getElementById('enrollmentCards');
+
+            // Course enrollment cards - show all including Unknown
+            let courseCards = data.courseEnrollment.map(c => `
+                <div class="metric-card" onclick="showStudentsByCourse('${c.course || 'Unknown'}')">
+                    <div class="metric-label">${c.course || 'Unknown'}</div>
+                    <div class="metric-value">
+                        ${c.count}
+                        <span class="metric-percentage">(${c.percentage}%)</span>
+                    </div>
+                </div>
+            `).join('');
+
+            // Total card
+            const totalCard = `
+                <div class="metric-card total" onclick="showAllStudents()">
+                    <div class="metric-label">Total</div>
+                    <div class="metric-value">${data.summary.totalStudents}</div>
+                </div>
+            `;
+
+            container.innerHTML = courseCards + totalCard;
+        }
+
+        function renderInstitutionCards(data) {
+            const container = document.getElementById('institutionCards');
+
+            // Institution cards - show all including Unknown
+            let institutionCards = data.institutionBreakdown.map(i => `
+                <div class="metric-card" onclick="showStudentsByInstitution('${i.institution || 'Unknown'}')">
+                    <div class="metric-label">${i.institution || 'Unknown'}</div>
+                    <div class="metric-value">${i.count}</div>
+                </div>
+            `).join('');
+
+            // Total card
+            const totalCard = `
+                <div class="metric-card total" onclick="showAllStudents()">
+                    <div class="metric-label">Total</div>
+                    <div class="metric-value">${data.institutionBreakdown.reduce((sum, i) => sum + i.count, 0)}</div>
+                </div>
+            `;
+
+            container.innerHTML = institutionCards + totalCard;
+        }
+
+        function renderProgressCards(data) {
+            const container = document.getElementById('progressCards');
+
+            // First row - pace distribution
+            const paceCards = `
+                <div class="metric-card" onclick="showStudentsByPace('behind')">
+                    <div class="metric-label">Behind Pace</div>
+                    <div class="metric-value">${data.paceDistribution.behind}</div>
+                </div>
+                <div class="metric-card" onclick="showStudentsByPace('on-pace')">
+                    <div class="metric-label">On Pace</div>
+                    <div class="metric-value">${data.paceDistribution.onPace}</div>
+                </div>
+                <div class="metric-card" onclick="showStudentsByPace('ahead')">
+                    <div class="metric-label">Ahead of Pace</div>
+                    <div class="metric-value">${data.paceDistribution.ahead}</div>
+                </div>
+            `;
+
+            container.innerHTML = paceCards;
+        }
+
+        function renderAttendanceCards(data) {
+            const container = document.getElementById('attendanceCards');
+
+            // Second row - attendance distribution
+            const attendanceCards = `
+                <div class="metric-card" onclick="showStudentsByAttendance('high')">
+                    <div class="metric-label">Attending &gt; 70% Weekly</div>
+                    <div class="metric-value">${data.attendanceDistribution.high}</div>
+                </div>
+                <div class="metric-card" onclick="showStudentsByAttendance('low')">
+                    <div class="metric-label">Attending &lt; 70% Weekly</div>
+                    <div class="metric-value">${data.attendanceDistribution.low}</div>
+                </div>
+                <div class="metric-card" onclick="showStudentsByAttendance('none')">
+                    <div class="metric-label">No Attendance</div>
+                    <div class="metric-value">${data.attendanceDistribution.none}</div>
+                </div>
+            `;
+
+            container.innerHTML = attendanceCards;
+        }
+
+        function renderPaceColumns(data) {
+            const container = document.getElementById('paceColumns');
+
+            const renderStudentList = (students) => {
+                if (students.length === 0) {
+                    return '<div style="text-align: center; color: #999; padding: 1rem; font-size: 0.75rem;">No students</div>';
+                }
+                return students.slice(0, 50).map(s => `
+                    <div class="student-item" title="${s.studentName} - ${s.course}">
+                        <div class="student-name">${s.studentName || 'Unknown'}</div>
+                        <div class="student-meta">${s.course || 'N/A'} • ${s.storyPointsPerWeek.toFixed(1)} pts/week</div>
+                    </div>
+                `).join('');
+            };
+
+            const columns = `
+                <div class="pace-column">
+                    <div class="pace-column-header">
+                        <span class="pace-column-title">Ahead</span>
+                        <span class="pace-column-count">${data.studentsByPace.ahead.length} students</span>
+                    </div>
+                    <div class="student-list">
+                        ${renderStudentList(data.studentsByPace.ahead)}
+                    </div>
+                </div>
+                <div class="pace-column">
+                    <div class="pace-column-header">
+                        <span class="pace-column-title">On Pace</span>
+                        <span class="pace-column-count">${data.studentsByPace.onPace.length} students</span>
+                    </div>
+                    <div class="student-list">
+                        ${renderStudentList(data.studentsByPace.onPace)}
+                    </div>
+                </div>
+                <div class="pace-column">
+                    <div class="pace-column-header">
+                        <span class="pace-column-title">Behind</span>
+                        <span class="pace-column-count">${data.studentsByPace.behind.length} students</span>
+                    </div>
+                    <div class="student-list">
+                        ${renderStudentList(data.studentsByPace.behind)}
+                    </div>
+                </div>
+            `;
+
+            container.innerHTML = columns;
+        }
+
+        function renderGauges(data) {
+            const container = document.getElementById('gaugesGrid');
+
+            container.innerHTML = `
+                <div class="gauge-card">
+                    <div class="gauge-title">All Students</div>
+                    <div class="gauge-container">
+                        <canvas id="gaugeAllStudents"></canvas>
+                    </div>
+                    <div class="gauge-scale">
+                        <span>0</span>
+                        <span>22</span>
+                    </div>
+                    <div style="margin-top: 0.75rem;">
+                        <div class="gauge-label">Avg. Points by Week</div>
+                        <div class="gauge-value">${data.averageStoryPoints.allStudents.toFixed(2)}</div>
+                    </div>
+                </div>
+                <div class="gauge-card">
+                    <div class="gauge-title">Started In The Last 30 Days</div>
+                    <div class="gauge-container">
+                        <canvas id="gaugeRecentStudents"></canvas>
+                    </div>
+                    <div class="gauge-scale">
+                        <span>0</span>
+                        <span>22</span>
+                    </div>
+                    <div style="margin-top: 0.75rem;">
+                        <div class="gauge-label">Avg. Points by Week</div>
+                        <div class="gauge-value">${data.averageStoryPoints.recentStudents.toFixed(2)}</div>
+                    </div>
+                </div>
+            `;
+
+            // Render gauge charts
+            setTimeout(() => {
+                createGaugeChart('gaugeAllStudents', data.averageStoryPoints.allStudents, 22);
+                createGaugeChart('gaugeRecentStudents', data.averageStoryPoints.recentStudents, 22);
+            }, 100);
+        }
+
+        function createGaugeChart(canvasId, value, max) {
+            const ctx = document.getElementById(canvasId);
+            if (!ctx) return;
+
+            const percentage = (value / max) * 100;
+            const color = '#7c77c9'; // Purple color from screenshot
+
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    datasets: [{
+                        data: [value, max - value],
+                        backgroundColor: [color, '#d9d9d9'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    cutout: '82%',
+                    rotation: -90,
+                    circumference: 180,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            enabled: false
+                        }
+                    }
+                }
+            });
+        }
+
+        function clearFilters() {
+            document.getElementById('weeksFilter').value = '4';
+            document.getElementById('courseFilter').value = '';
+            document.getElementById('institutionFilter').value = '';
+            document.getElementById('statusFilter').value = '';
+            loadDashboard();
+        }
+
+        // Fetch all student metrics for filtering
+        async function fetchAllStudentMetrics() {
+            try {
+                const token = localStorage.getItem('auth_token');
+                const response = await fetch('/.netlify/functions/dashboard-education?weeks=4', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                const data = await response.json();
+
+                // Combine all student lists
+                allStudentMetrics = [
+                    ...data.studentsByPace.ahead,
+                    ...data.studentsByPace.onPace,
+                    ...data.studentsByPace.behind
+                ];
+
+                // Debug logging
+                console.log('=== DEBUG: fetchAllStudentMetrics ===');
+                console.log('Total students fetched:', allStudentMetrics.length);
+                console.log('Dashboard summary:', data.summary);
+                console.log('Course enrollment from API:', data.courseEnrollment);
+                console.log('Institution breakdown from API:', data.institutionBreakdown);
+                console.log('Students by pace counts:', {
+                    ahead: data.studentsByPace.ahead.length,
+                    onPace: data.studentsByPace.onPace.length,
+                    behind: data.studentsByPace.behind.length,
+                    total: allStudentMetrics.length
+                });
+
+                // Check for discrepancy
+                if (data.summary.totalStudents !== allStudentMetrics.length) {
+                    console.warn('⚠️ DISCREPANCY DETECTED:');
+                    console.warn(`API reports ${data.summary.totalStudents} total students`);
+                    console.warn(`But studentsByPace only contains ${allStudentMetrics.length} students`);
+                    console.warn('This means some students are missing from the pace calculations!');
+                }
+            } catch (error) {
+                console.error('Error fetching student metrics:', error);
+            }
+        }
+
+        // Modal functions
+        function showAllStudents() {
+            currentModalStudents = allStudentMetrics;
+            openStudentModal('All Students', `Total: ${allStudentMetrics.length} students`);
+        }
+
+        function showStudentsByCourse(course) {
+            // Debug logging
+            console.log('=== DEBUG: showStudentsByCourse ===');
+            console.log('Looking for course:', course);
+            console.log('Total students in allStudentMetrics:', allStudentMetrics.length);
+            console.log('All courses in data:', [...new Set(allStudentMetrics.map(s => s.course || 'null/undefined'))]);
+
+            // Handle Unknown by matching null, undefined, empty string, or "Unknown"
+            if (course === 'Unknown' || course === '' || course === null) {
+                currentModalStudents = allStudentMetrics.filter(s =>
+                    !s.course || s.course === '' || s.course === 'Unknown'
+                );
+                console.log('Students with unknown course:', currentModalStudents);
+            } else {
+                currentModalStudents = allStudentMetrics.filter(s => s.course === course);
+                console.log('Students in course:', currentModalStudents);
+            }
+
+            // If no students found, log all student data for debugging
+            if (currentModalStudents.length === 0) {
+                console.warn('⚠️ NO STUDENTS FOUND!');
+                console.log('Sample of allStudentMetrics (first 5):', allStudentMetrics.slice(0, 5));
+                console.log('Dashboard data courseEnrollment:', dashboardData?.courseEnrollment);
+            }
+
+            openStudentModal(`${course}`, `${currentModalStudents.length} students enrolled`);
+        }
+
+        function showStudentsByInstitution(institution) {
+            // Debug logging
+            console.log('=== DEBUG: showStudentsByInstitution ===');
+            console.log('Looking for institution:', institution);
+            console.log('Total students in allStudentMetrics:', allStudentMetrics.length);
+            console.log('All institutions in data:', [...new Set(allStudentMetrics.map(s => s.institution || 'null/undefined'))]);
+
+            // Handle Unknown by matching null, undefined, empty string, or "Unknown"
+            if (institution === 'Unknown' || institution === '' || institution === null) {
+                currentModalStudents = allStudentMetrics.filter(s =>
+                    !s.institution || s.institution === '' || s.institution === 'Unknown'
+                );
+                console.log('Students with unknown institution:', currentModalStudents);
+            } else {
+                currentModalStudents = allStudentMetrics.filter(s => s.institution === institution);
+                console.log('Students in institution:', currentModalStudents);
+            }
+
+            // If no students found, log all student data for debugging
+            if (currentModalStudents.length === 0) {
+                console.warn('⚠️ NO STUDENTS FOUND!');
+                console.log('Sample of allStudentMetrics (first 5):', allStudentMetrics.slice(0, 5));
+                console.log('Dashboard data institutionBreakdown:', dashboardData?.institutionBreakdown);
+            }
+
+            openStudentModal(`${institution}`, `${currentModalStudents.length} students`);
+        }
+
+        function showStudentsByPace(paceStatus) {
+            currentModalStudents = allStudentMetrics.filter(s => s.paceStatus === paceStatus);
+            const titles = {
+                'ahead': 'Students Ahead of Pace',
+                'on-pace': 'Students On Pace',
+                'behind': 'Students Behind Pace'
+            };
+            openStudentModal(titles[paceStatus] || 'Students', `${currentModalStudents.length} students`);
+        }
+
+        function showStudentsByAttendance(category) {
+            currentModalStudents = allStudentMetrics.filter(s => s.attendanceCategory === category);
+            const titles = {
+                'high': 'Students Attending > 70% Weekly',
+                'low': 'Students Attending < 70% Weekly',
+                'none': 'Students with No Attendance'
+            };
+            openStudentModal(titles[category] || 'Students', `${currentModalStudents.length} students`);
+        }
+
+        function openStudentModal(title, subtitle) {
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalSubtitle').textContent = subtitle;
+            document.getElementById('modalSearch').value = '';
+            modalSearchQuery = '';
+            renderModalStudents();
+            document.getElementById('studentModal').classList.add('active');
+        }
+
+        function closeStudentModal() {
+            document.getElementById('studentModal').classList.remove('active');
+        }
+
+        function renderModalStudents() {
+            const container = document.getElementById('modalContent');
+
+            let filteredStudents = currentModalStudents;
+            if (modalSearchQuery) {
+                const query = modalSearchQuery.toLowerCase();
+                filteredStudents = currentModalStudents.filter(s =>
+                    (s.studentName || '').toLowerCase().includes(query) ||
+                    (s.course || '').toLowerCase().includes(query) ||
+                    (s.institution || '').toLowerCase().includes(query)
+                );
+            }
+
+            if (filteredStudents.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🔍</div>
+                        <div>No students found</div>
+                    </div>
+                `;
+                return;
+            }
+
+            const studentsHTML = filteredStudents.map(s => `
+                <div class="modal-student-card">
+                    <div class="student-profile-pic">
+                        ${s.profilePictureUrl ? `<img src="${s.profilePictureUrl}" alt="${s.studentName}">` : '👤'}
+                    </div>
+                    <div class="modal-student-details">
+                        <div class="modal-student-name">${s.studentName || 'Unknown'}</div>
+                        <div class="modal-student-info">
+                            <div><strong>Course:</strong> ${s.course || 'N/A'}</div>
+                            <div><strong>Institution:</strong> ${s.institution || 'N/A'}</div>
+                            ${s.paceStatus ? `<div><strong>Pace:</strong> ${s.paceStatus.replace('-', ' ')}</div>` : ''}
+                            ${s.storyPointsPerWeek ? `<div><strong>Story Points/Week:</strong> ${s.storyPointsPerWeek.toFixed(1)}</div>` : ''}
+                            ${s.attendancePercent !== undefined ? `<div><strong>Attendance:</strong> ${s.attendancePercent.toFixed(0)}%</div>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            container.innerHTML = `<div class="student-grid">${studentsHTML}</div>`;
+        }
+
+        // Search functionality
+        document.addEventListener('DOMContentLoaded', () => {
+            const searchInput = document.getElementById('modalSearch');
+            if (searchInput) {
+                searchInput.addEventListener('input', (e) => {
+                    modalSearchQuery = e.target.value;
+                    renderModalStudents();
+                });
+            }
+        });
+
+        // Close modal on backdrop click
+        document.getElementById('studentModal').addEventListener('click', (e) => {
+            if (e.target.id === 'studentModal') {
+                closeStudentModal();
+            }
+        });
+
+        // Close modal on escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeStudentModal();
+            }
+        });
+
+        // Debug function to display detailed info
+        function showDebugInfo() {
+            console.log('=== COMPREHENSIVE DEBUG INFO ===');
+            console.log('\n1. Dashboard Summary:');
+            console.log('   Total Students (API):', dashboardData?.summary?.totalStudents);
+            console.log('   Total Students (allStudentMetrics):', allStudentMetrics.length);
+
+            console.log('\n2. Course Enrollment (from API):');
+            console.table(dashboardData?.courseEnrollment);
+
+            console.log('\n3. Institution Breakdown (from API):');
+            console.table(dashboardData?.institutionBreakdown);
+
+            console.log('\n4. Students in allStudentMetrics by course:');
+            const byCourse = {};
+            allStudentMetrics.forEach(s => {
+                const course = s.course || 'null/undefined';
+                byCourse[course] = (byCourse[course] || 0) + 1;
+            });
+            console.table(byCourse);
+
+            console.log('\n5. Students in allStudentMetrics by institution:');
+            const byInstitution = {};
+            allStudentMetrics.forEach(s => {
+                const inst = s.institution || 'null/undefined';
+                byInstitution[inst] = (byInstitution[inst] || 0) + 1;
+            });
+            console.table(byInstitution);
+
+            console.log('\n6. Sample students with missing data:');
+            const missingCourse = allStudentMetrics.filter(s => !s.course).slice(0, 3);
+            const missingInstitution = allStudentMetrics.filter(s => !s.institution).slice(0, 3);
+            console.log('   Missing course:', missingCourse);
+            console.log('   Missing institution:', missingInstitution);
+
+            console.log('\n7. Pace Distribution:');
+            console.log('   Ahead:', dashboardData?.studentsByPace?.ahead?.length || 0);
+            console.log('   On Pace:', dashboardData?.studentsByPace?.onPace?.length || 0);
+            console.log('   Behind:', dashboardData?.studentsByPace?.behind?.length || 0);
+
+            alert('Debug info logged to console! Open DevTools (F12) and check the Console tab.');
+        }
+    </script>
+</body>
+</html>

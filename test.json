@@ -1,0 +1,194 @@
+{
+    "totalStudents": 1351,
+    "foundationsCompletedCount": 9,
+    "foundationsCompletedDetails": [
+        {
+            "name": "Aimee Jorquera",
+            "student_id": "rec2ou29QnhY3IqYv",
+            "current_foundations_status": "Complete",
+            "created_at": "2025-01-23T01:11:45.000Z",
+            "updated_at": "2025-11-08T21:07:29.000Z",
+            "foundations_status_history": [
+                {
+                    "status": "Complete",
+                    "date": "2025-01-23T01:11:45.000Z"
+                }
+            ],
+            "admissions_status_history": [
+                {
+                    "status": "No Start",
+                    "date": "2025-01-23T01:11:45.000Z"
+                }
+            ],
+            "airtable_record_id": "rec2ou29QnhY3IqYv"
+        },
+        {
+            "name": "Darren Leis",
+            "student_id": "recHeIjkiOkAtIiVO",
+            "current_foundations_status": "Complete",
+            "created_at": "2025-03-26T17:35:21.000Z",
+            "updated_at": "2025-10-31T16:43:42.000Z",
+            "foundations_status_history": [
+                {
+                    "status": "Complete",
+                    "date": "2025-03-26T17:35:21.000Z"
+                }
+            ],
+            "admissions_status_history": [
+                {
+                    "status": "Pending Approval",
+                    "date": "2025-03-26T17:35:21.000Z"
+                }
+            ],
+            "airtable_record_id": "recHeIjkiOkAtIiVO"
+        },
+        {
+            "name": "First Test",
+            "student_id": "recIPKMCbhVR8j5fp",
+            "current_foundations_status": "Complete",
+            "created_at": "2025-11-04T19:53:20.000Z",
+            "updated_at": "2025-11-11T17:26:32.000Z",
+            "foundations_status_history": [
+                {
+                    "status": "Complete",
+                    "date": "2025-11-04T19:53:20.000Z"
+                }
+            ],
+            "admissions_status_history": [
+                {
+                    "status": "In Progress",
+                    "date": "2025-11-04T19:53:20.000Z"
+                }
+            ],
+            "airtable_record_id": "recIPKMCbhVR8j5fp"
+        },
+        {
+            "name": "Jay Larsen",
+            "student_id": "recNdB3NRWxshzOZt",
+            "current_foundations_status": "Complete",
+            "created_at": "2025-07-17T17:25:51.000Z",
+            "updated_at": "2025-11-05T17:44:42.000Z",
+            "foundations_status_history": [
+                {
+                    "status": "Complete",
+                    "date": "2025-07-17T17:25:51.000Z"
+                }
+            ],
+            "admissions_status_history": [
+                {
+                    "status": "Started",
+                    "date": "2025-07-17T17:25:51.000Z"
+                }
+            ],
+            "airtable_record_id": "recNdB3NRWxshzOZt"
+        },
+        {
+            "name": "Mickey Mouse",
+            "student_id": "recRyRW4NjmjuDOSv",
+            "current_foundations_status": "Complete",
+            "created_at": "2025-07-24T23:13:45.000Z",
+            "updated_at": "2025-10-27T22:28:18.000Z",
+            "foundations_status_history": [
+                {
+                    "status": "Complete",
+                    "date": "2025-07-24T23:13:45.000Z"
+                }
+            ],
+            "admissions_status_history": [
+                {
+                    "status": "In Progress",
+                    "date": "2025-07-24T23:13:45.000Z"
+                }
+            ],
+            "airtable_record_id": "recRyRW4NjmjuDOSv"
+        },
+        {
+            "name": "Carlos Reyna",
+            "student_id": "recTXfF4K65RIE3oe",
+            "current_foundations_status": "Complete",
+            "created_at": "2025-01-23T01:15:57.000Z",
+            "updated_at": "2025-11-08T21:07:31.000Z",
+            "foundations_status_history": [
+                {
+                    "status": "Complete",
+                    "date": "2025-01-23T01:15:57.000Z"
+                }
+            ],
+            "admissions_status_history": [
+                {
+                    "status": "No Start",
+                    "date": "2025-01-23T01:15:57.000Z"
+                }
+            ],
+            "airtable_record_id": "recTXfF4K65RIE3oe"
+        },
+        {
+            "name": "Brian Cook",
+            "student_id": "recV62jHdfobiu1FZ",
+            "current_foundations_status": "Complete",
+            "created_at": "2025-01-23T01:11:47.000Z",
+            "updated_at": "2025-11-07T20:00:58.000Z",
+            "foundations_status_history": [
+                {
+                    "status": "Complete",
+                    "date": "2025-01-23T01:11:47.000Z"
+                }
+            ],
+            "admissions_status_history": [
+                {
+                    "status": "Pending Approval",
+                    "date": "2025-01-23T01:11:47.000Z"
+                }
+            ],
+            "airtable_record_id": "recV62jHdfobiu1FZ"
+        },
+        {
+            "name": "Bryan Bradley",
+            "student_id": "recWcwjNkkv1gbkB3",
+            "current_foundations_status": "Complete",
+            "created_at": "2025-01-23T01:18:35.000Z",
+            "updated_at": "2025-11-03T19:19:34.000Z",
+            "foundations_status_history": [
+                {
+                    "status": "Complete",
+                    "date": "2025-01-23T01:18:35.000Z"
+                }
+            ],
+            "admissions_status_history": [
+                {
+                    "status": "No Start",
+                    "date": "2025-01-23T01:18:35.000Z"
+                }
+            ],
+            "airtable_record_id": "recWcwjNkkv1gbkB3"
+        },
+        {
+            "name": "Marcus Peterson",
+            "student_id": "recZxtDdcwEOA5yte",
+            "current_foundations_status": "Complete",
+            "created_at": "2025-01-23T01:01:36.000Z",
+            "updated_at": "2025-11-11T17:26:39.000Z",
+            "foundations_status_history": [
+                {
+                    "status": "Complete",
+                    "date": "2025-01-23T01:01:36.000Z"
+                }
+            ],
+            "admissions_status_history": [
+                {
+                    "status": "In Progress",
+                    "date": "2025-01-23T01:01:36.000Z"
+                }
+            ],
+            "airtable_record_id": "recZxtDdcwEOA5yte"
+        }
+    ],
+    "allFoundationsStatuses": {
+        "null": 1129,
+        "Not Started": 205,
+        "Complete": 9,
+        "In Progress": 3,
+        "Stalled": 2,
+        "Sent": 3
+    }
+}

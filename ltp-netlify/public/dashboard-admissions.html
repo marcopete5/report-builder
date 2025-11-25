@@ -1,0 +1,1466 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Admissions Dashboard - LTP Reports</title>
+        <link rel="stylesheet" href="/global.css" />
+        <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+        <script src="/navbar.js"></script>
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+            body {
+                font-family: var(--font-family-primary);
+                background: #f5f7fa;
+                color: #2d3748;
+            }
+            .navbar {
+                background: white;
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+                padding: 0 2rem;
+                display: flex;
+                align-items: center;
+                gap: 2rem;
+                height: 64px;
+            }
+            .navbar-brand {
+                display: flex;
+                align-items: center;
+            }
+            .navbar-logo {
+                font-size: 1.5rem;
+                font-weight: 600;
+                color: #2d3748;
+                text-decoration: none;
+            }
+            .navbar-logo:hover {
+                color: #4299e1;
+            }
+            .navbar-menu {
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+                flex: 1;
+            }
+            .navbar-item {
+                padding: 0.5rem 1rem;
+                color: #4a5568;
+                text-decoration: none;
+                font-size: 0.875rem;
+                font-weight: 500;
+                border-radius: 0.375rem;
+                transition: all 0.2s;
+            }
+            .navbar-item:hover {
+                background: #f7fafc;
+                color: #4299e1;
+            }
+            .navbar-end {
+                display: flex;
+                align-items: center;
+                gap: 1rem;
+            }
+            .navbar-user {
+                color: #718096;
+                font-size: 0.875rem;
+            }
+            .role-badge {
+                display: inline-block;
+                padding: 0.25rem 0.75rem;
+                border-radius: 9999px;
+                font-size: 0.75rem;
+                font-weight: 600;
+                text-transform: uppercase;
+            }
+            .role-superadmin {
+                background: #fbd38d;
+                color: #744210;
+            }
+            .role-admin {
+                background: #fed7d7;
+                color: #c53030;
+            }
+            .role-student {
+                background: #c6f6d5;
+                color: #276749;
+            }
+            .btn {
+                padding: 0.5rem 1rem;
+                border-radius: 0.375rem;
+                border: none;
+                cursor: pointer;
+                font-size: 0.875rem;
+                font-weight: 500;
+                transition: all 0.2s;
+            }
+            .btn-primary {
+                background: #4299e1;
+                color: white;
+            }
+            .btn-primary:hover {
+                background: #3182ce;
+            }
+            .btn-secondary {
+                background: #e2e8f0;
+                color: #2d3748;
+            }
+            .btn-secondary:hover {
+                background: #cbd5e0;
+            }
+            @media (max-width: 768px) {
+                .navbar {
+                    padding: 0 1rem;
+                    gap: 1rem;
+                    height: auto;
+                    min-height: 64px;
+                    flex-wrap: wrap;
+                }
+                .navbar-menu {
+                    order: 3;
+                    flex-basis: 100%;
+                    padding: 0.5rem 0;
+                    gap: 0.25rem;
+                }
+                .navbar-user {
+                    display: none;
+                }
+            }
+            .container {
+                max-width: 1400px;
+                margin: 2rem auto;
+                padding: 0 2rem;
+            }
+            .header {
+                margin-bottom: 2rem;
+            }
+            .header h1 {
+                font-size: 2rem;
+                color: #2d3748;
+                margin-bottom: 0.5rem;
+            }
+            .header .subtitle {
+                color: #718096;
+                font-size: 0.875rem;
+            }
+            .metrics-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+                gap: 1.5rem;
+                margin-bottom: 2rem;
+            }
+            .metric-card {
+                background: white;
+                border-radius: 0.5rem;
+                padding: 1.5rem;
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+                position: relative;
+                cursor: default;
+            }
+            .metric-card.has-tooltip {
+                cursor: help;
+            }
+            .metric-card.has-tooltip:hover {
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
+            }
+            .metric-tooltip {
+                display: none;
+                position: absolute;
+                bottom: 100%;
+                left: 50%;
+                transform: translateX(-50%);
+                margin-bottom: 0.5rem;
+                background: #2d3748;
+                color: white;
+                padding: 0.75rem 1rem;
+                border-radius: 0.375rem;
+                font-size: 0.875rem;
+                max-width: 300px;
+                max-height: 400px;
+                overflow-y: auto;
+                z-index: 1000;
+                box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+                white-space: normal;
+            }
+            .metric-tooltip::after {
+                content: '';
+                position: absolute;
+                top: 100%;
+                left: 50%;
+                transform: translateX(-50%);
+                border: 8px solid transparent;
+                border-top-color: #2d3748;
+            }
+            .metric-card.has-tooltip:hover .metric-tooltip {
+                display: block;
+            }
+            .metric-tooltip ul {
+                list-style: none;
+                padding: 0;
+                margin: 0;
+            }
+            .metric-tooltip li {
+                padding: 0.25rem 0;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            }
+            .metric-tooltip li:last-child {
+                border-bottom: none;
+            }
+            .metric-tooltip-title {
+                font-weight: 600;
+                margin-bottom: 0.5rem;
+                padding-bottom: 0.5rem;
+                border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+            }
+            .metric-tooltip-empty {
+                color: #a0aec0;
+                font-style: italic;
+            }
+            .metric-label {
+                font-size: 0.875rem;
+                color: #718096;
+                margin-bottom: 0.5rem;
+            }
+            .metric-value {
+                font-size: 2rem;
+                font-weight: 700;
+                color: #2d3748;
+            }
+            .metric-value.blue {
+                color: #4299e1;
+            }
+            .metric-value.teal {
+                color: #38b2ac;
+            }
+            .metric-value.orange {
+                color: #ed8936;
+            }
+            .metric-value.green {
+                color: #48bb78;
+            }
+            .metric-value.yellow {
+                color: #ecc94b;
+            }
+            .metric-value.purple {
+                color: #9f7aea;
+            }
+            .metric-value.emerald {
+                color: #10b981;
+            }
+            .metric-value.pink {
+                color: #ec4899;
+            }
+            .metric-value.red {
+                color: #f56565;
+            }
+            .chart-card {
+                background: white;
+                border-radius: 0.5rem;
+                padding: 1.5rem;
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+                margin-bottom: 1.5rem;
+            }
+            .chart-card h3 {
+                font-size: 1.125rem;
+                margin-bottom: 1rem;
+                color: #2d3748;
+            }
+            .chart-container {
+                position: relative;
+                height: 300px;
+            }
+            .chart-container.tall {
+                height: 400px;
+            }
+            .two-column-grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 1.5rem;
+                margin-bottom: 1.5rem;
+            }
+            @media (max-width: 1024px) {
+                .two-column-grid {
+                    grid-template-columns: 1fr;
+                }
+            }
+            .counselor-table {
+                width: 100%;
+                border-collapse: collapse;
+            }
+            .counselor-table th,
+            .counselor-table td {
+                padding: 0.75rem;
+                text-align: left;
+                border-bottom: 1px solid #e5e7eb;
+            }
+            .counselor-table th {
+                background: #f9fafb;
+                font-weight: 600;
+                font-size: 0.875rem;
+                color: #374151;
+            }
+            .counselor-table td {
+                font-size: 0.875rem;
+                color: #4b5563;
+            }
+            .counselor-table tr:hover {
+                background: #f9fafb;
+            }
+            .rate-badge {
+                display: inline-block;
+                padding: 0.25rem 0.5rem;
+                border-radius: 0.25rem;
+                font-size: 0.75rem;
+                font-weight: 600;
+            }
+            .rate-badge.high {
+                background: #d1fae5;
+                color: #065f46;
+            }
+            .rate-badge.medium {
+                background: #fef3c7;
+                color: #92400e;
+            }
+            .rate-badge.low {
+                background: #fee2e2;
+                color: #991b1b;
+            }
+            .loading {
+                text-align: center;
+                padding: 3rem;
+                color: #718096;
+            }
+            .spinner {
+                border: 4px solid #f3f4f6;
+                border-top: 4px solid #4299e1;
+                border-radius: 50%;
+                width: 40px;
+                height: 40px;
+                animation: spin 1s linear infinite;
+                margin: 0 auto 1rem;
+            }
+            @keyframes spin {
+                0% {
+                    transform: rotate(0deg);
+                }
+                100% {
+                    transform: rotate(360deg);
+                }
+            }
+            .filter-card {
+                background: white;
+                border-radius: 0.5rem;
+                padding: 1.5rem;
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+                margin-bottom: 2rem;
+            }
+            .filter-row {
+                display: flex;
+                gap: 1rem;
+                align-items: flex-end;
+                flex-wrap: wrap;
+            }
+            .filter-group {
+                display: flex;
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+            .filter-label {
+                font-size: 0.875rem;
+                font-weight: 600;
+                color: #4a5568;
+            }
+            .filter-input, .filter-select {
+                padding: 0.5rem 0.75rem;
+                border: 1px solid #cbd5e0;
+                border-radius: 0.375rem;
+                font-size: 0.875rem;
+                color: #2d3748;
+            }
+            .filter-input:focus, .filter-select:focus {
+                outline: none;
+                border-color: #4299e1;
+                box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+            }
+            .date-group {
+                display: flex;
+                gap: 0.5rem;
+                align-items: center;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="navbar-container"></div>
+
+        <div class="container">
+            <div class="header">
+                <div
+                    style="
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                    ">
+                    <div>
+                        <h1>Admissions Dashboard</h1>
+                        <p class="subtitle">
+                            Lead funnel, conversion metrics, and counselor
+                            performance
+                        </p>
+                    </div>
+                    <button
+                        class="btn btn-primary"
+                        id="syncButton"
+                        onclick="syncAirtableData()">
+                        <span id="syncButtonText">Sync All from Airtable</span>
+                    </button>
+                    <button
+                        class="btn btn-secondary"
+                        id="migrateButton"
+                        onclick="runMigration()"
+                        style="margin-left: 0.5rem;">
+                        <span id="migrateButtonText">Migrate Historical Data</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Date Filter -->
+            <div class="filter-card">
+                <div class="filter-row">
+                    <div class="filter-group">
+                        <label class="filter-label">Filter Mode</label>
+                        <select id="filterMode" class="filter-select" onchange="toggleFilterInputs()">
+                            <option value="created">New Leads (by created date)</option>
+                            <option value="snapshot">Snapshot in Time</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label class="filter-label">Filter Type</label>
+                        <select id="filterType" class="filter-select" onchange="toggleFilterInputs()">
+                            <option value="month">Month</option>
+                            <option value="range">Date Range</option>
+                        </select>
+                    </div>
+
+                    <!-- Month Selector -->
+                    <div id="monthSelector" class="filter-group">
+                        <label class="filter-label">Select Month</label>
+                        <div class="date-group">
+                            <select id="filterMonth" class="filter-select">
+                                <option value="1">January</option>
+                                <option value="2">February</option>
+                                <option value="3">March</option>
+                                <option value="4">April</option>
+                                <option value="5">May</option>
+                                <option value="6">June</option>
+                                <option value="7">July</option>
+                                <option value="8">August</option>
+                                <option value="9">September</option>
+                                <option value="10">October</option>
+                                <option value="11">November</option>
+                                <option value="12">December</option>
+                            </select>
+                            <select id="filterYear" class="filter-select">
+                                <!-- Populated by JavaScript -->
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Date Range Picker -->
+                    <div id="rangeSelector" class="filter-group" style="display: none;">
+                        <label class="filter-label">Date Range</label>
+                        <div class="date-group">
+                            <input type="date" id="startDate" class="filter-input" />
+                            <span>to</span>
+                            <input type="date" id="endDate" class="filter-input" />
+                        </div>
+                    </div>
+
+                    <div class="filter-group">
+                        <label class="filter-label">&nbsp;</label>
+                        <button class="btn btn-primary" onclick="applyDateFilter()">Apply Filter</button>
+                    </div>
+
+                    <div class="filter-group">
+                        <label class="filter-label">&nbsp;</label>
+                        <button class="btn btn-secondary" onclick="clearDateFilter()">Clear Filter</button>
+                    </div>
+                </div>
+                <div style="margin-top: 1rem; font-size: 0.875rem; color: #718096;">
+                    <span id="filterStatus">Showing: This Month - New Leads (Total Leads = created in period, Status = as of end date)</span>
+                </div>
+            </div>
+
+            <div id="loading" class="loading">
+                <div class="spinner"></div>
+                <p>Loading admissions data...</p>
+            </div>
+
+            <div id="dashboard" style="display: none">
+                <!-- Overview Metrics -->
+                <div class="metrics-grid">
+                    <div class="metric-card has-tooltip" id="newLeadsCard">
+                        <div class="metric-label">New Leads</div>
+                        <div class="metric-value blue" id="newLeads">
+                            -
+                        </div>
+                        <div class="metric-tooltip" id="newLeadsTooltip"></div>
+                    </div>
+                    <div class="metric-card has-tooltip" id="foundationsSentCard">
+                        <div class="metric-label">Foundations Sent</div>
+                        <div class="metric-value teal" id="foundationsSent">
+                            -
+                        </div>
+                        <div class="metric-tooltip" id="foundationsSentTooltip"></div>
+                    </div>
+                    <div class="metric-card has-tooltip" id="foundationsInProgressCard">
+                        <div class="metric-label">Foundations In Progress</div>
+                        <div
+                            class="metric-value orange"
+                            id="foundationsInProgress">
+                            -
+                        </div>
+                        <div class="metric-tooltip" id="foundationsInProgressTooltip"></div>
+                    </div>
+                    <div class="metric-card has-tooltip" id="foundationsCompletedCard">
+                        <div class="metric-label">Foundations Completed</div>
+                        <div
+                            class="metric-value green"
+                            id="foundationsCompleted">
+                            -
+                        </div>
+                        <div class="metric-tooltip" id="foundationsCompletedTooltip"></div>
+                    </div>
+                    <div class="metric-card has-tooltip" id="pendingApprovalCard">
+                        <div class="metric-label">Pending Approval</div>
+                        <div class="metric-value yellow" id="pendingApproval">
+                            -
+                        </div>
+                        <div class="metric-tooltip" id="pendingApprovalTooltip"></div>
+                    </div>
+                    <div class="metric-card has-tooltip" id="registeredStudentsCard">
+                        <div class="metric-label">Registered Students</div>
+                        <div class="metric-value purple" id="registeredStudents">
+                            -
+                        </div>
+                        <div class="metric-tooltip" id="registeredStudentsTooltip"></div>
+                    </div>
+                    <div class="metric-card has-tooltip" id="enrolledStudentsCard">
+                        <div class="metric-label">Enrolled Students</div>
+                        <div class="metric-value emerald" id="enrolledStudents">
+                            -
+                        </div>
+                        <div class="metric-tooltip" id="enrolledStudentsTooltip"></div>
+                    </div>
+                    <div class="metric-card has-tooltip" id="noStartFoundationsFailedCard">
+                        <div class="metric-label">No Start/Foundations Failed</div>
+                        <div class="metric-value pink" id="noStartFoundationsFailed">-</div>
+                        <div class="metric-tooltip" id="noStartFoundationsFailedTooltip"></div>
+                    </div>
+                    <div class="metric-card has-tooltip" id="leadsLostCard">
+                        <div class="metric-label">Leads Lost / Withdrawn</div>
+                        <div class="metric-value red" id="leadsLost">-</div>
+                        <div class="metric-tooltip" id="leadsLostTooltip"></div>
+                    </div>
+                </div>
+
+                <!-- Conversion Funnel -->
+                <div class="chart-card">
+                    <h3>Conversion Funnel</h3>
+                    <div class="chart-container">
+                        <canvas id="conversionChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Two Column: Programs & Financial Status -->
+                <div class="two-column-grid">
+                    <div class="chart-card">
+                        <h3>Enrolled by Program</h3>
+                        <div class="chart-container">
+                            <canvas id="programChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="chart-card">
+                        <h3>Financial Status</h3>
+                        <div class="chart-container">
+                            <canvas id="financialChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Two Column: Start Dates & Lead Sources -->
+                <div class="two-column-grid">
+                    <div class="chart-card">
+                        <h3>Upcoming Start Dates</h3>
+                        <div class="chart-container">
+                            <canvas id="startDatesChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="chart-card">
+                        <h3>Lead Sources</h3>
+                        <div class="chart-container">
+                            <canvas id="leadSourcesChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Weekly Trends -->
+                <div class="chart-card">
+                    <h3>Weekly Lead & Enrollment Trends</h3>
+                    <div class="chart-container">
+                        <canvas id="trendsChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Counselor Performance -->
+                <div class="chart-card">
+                    <h3>Counselor Performance</h3>
+                    <table class="counselor-table">
+                        <thead>
+                            <tr>
+                                <th>Counselor</th>
+                                <th>Leads Assigned</th>
+                                <th>Contact Rate (24hrs)</th>
+                                <th>Conversion Rate</th>
+                                <th>Enrolled</th>
+                                <th>Avg Days to Enrollment</th>
+                            </tr>
+                        </thead>
+                        <tbody id="counselorTableBody">
+                            <!-- Populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            let dashboardData = null;
+            let conversionChartInstance = null;
+            let programChartInstance = null;
+            let financialChartInstance = null;
+            let startDatesChartInstance = null;
+            let leadSourcesChartInstance = null;
+            let trendsChartInstance = null;
+
+            async function checkAuth() {
+                const token = localStorage.getItem('auth_token');
+
+                if (!token) {
+                    window.location.href = '/login.html';
+                    return;
+                }
+
+                try {
+                    const response = await fetch(
+                        '/.netlify/functions/auth-me',
+                        {
+                            headers: { Authorization: `Bearer ${token}` }
+                        }
+                    );
+
+                    if (!response.ok) {
+                        throw new Error('Not authenticated');
+                    }
+
+                    const data = await response.json();
+
+                    if (!data.authenticated) {
+                        throw new Error('Not authenticated');
+                    }
+
+                    // Check if user is admin
+                    if (
+                        data.user.role !== 'admin' &&
+                        data.user.role !== 'superadmin'
+                    ) {
+                        alert('Access denied. Admin privileges required.');
+                        window.location.href = '/';
+                        return;
+                    }
+
+                    // Render navbar
+                    const navbarContainer =
+                        document.getElementById('navbar-container');
+                    navbarContainer.innerHTML = getNavbarHTML(data.user);
+
+                    // Load dashboard data
+                    await loadDashboard();
+                } catch (err) {
+                    console.error('Auth check failed:', err);
+                    localStorage.removeItem('auth_token');
+                    localStorage.removeItem('user');
+                    window.location.href = '/login.html';
+                }
+            }
+
+            async function loadDashboard() {
+                const token = localStorage.getItem('auth_token');
+
+                try {
+                    // Build query parameters for date filter
+                    const filterMode = document.getElementById('filterMode')?.value || 'created';
+                    const filterType = document.getElementById('filterType')?.value || 'month';
+
+                    let queryParams = `?filterMode=${filterMode}&filterType=${filterType}`;
+
+                    if (filterType === 'month') {
+                        const month = document.getElementById('filterMonth')?.value;
+                        const year = document.getElementById('filterYear')?.value;
+                        if (month && year) {
+                            queryParams += `&month=${month}&year=${year}`;
+                        }
+                    } else if (filterType === 'range') {
+                        const startDate = document.getElementById('startDate')?.value;
+                        const endDate = document.getElementById('endDate')?.value;
+                        if (startDate && endDate) {
+                            queryParams += `&startDate=${startDate}&endDate=${endDate}`;
+                        }
+                    }
+
+                    const response = await fetch(
+                        `/.netlify/functions/dashboard-admissions${queryParams}`,
+                        {
+                            headers: { Authorization: `Bearer ${token}` }
+                        }
+                    );
+
+                    if (!response.ok) {
+                        throw new Error('Failed to load dashboard data');
+                    }
+
+                    dashboardData = await response.json();
+
+                    // Update UI
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('dashboard').style.display =
+                        'block';
+
+                    renderOverviewMetrics();
+                    renderConversionChart();
+                    renderProgramChart();
+                    renderFinancialChart();
+                    renderStartDatesChart();
+                    renderLeadSourcesChart();
+                    renderTrendsChart();
+                    renderCounselorTable();
+                } catch (err) {
+                    console.error('Error loading dashboard:', err);
+                    document.getElementById('loading').innerHTML = `
+                    <p style="color: #f56565;">Error loading dashboard: ${err.message}</p>
+                    <button class="btn btn-primary" onclick="loadDashboard()">Retry</button>
+                `;
+                }
+            }
+
+            function renderOverviewMetrics() {
+                const { overview } = dashboardData;
+                document.getElementById('newLeads').textContent =
+                    overview.newLeads;
+                document.getElementById('foundationsSent').textContent =
+                    overview.foundationsSent;
+                document.getElementById('foundationsInProgress').textContent =
+                    overview.foundationsInProgress;
+                document.getElementById('foundationsCompleted').textContent =
+                    overview.foundationsCompleted;
+                document.getElementById('pendingApproval').textContent =
+                    overview.pendingApproval;
+                document.getElementById('registeredStudents').textContent =
+                    overview.registeredStudents;
+                document.getElementById('enrolledStudents').textContent =
+                    overview.enrolledStudents;
+                document.getElementById('noStartFoundationsFailed').textContent =
+                    overview.noStartFoundationsFailed;
+                document.getElementById('leadsLost').textContent =
+                    overview.leadsLostWithdrawn;
+
+                // Populate tooltips
+                renderTooltip('newLeadsTooltip', 'New Leads', overview.newLeadsNames);
+                renderTooltip('foundationsSentTooltip', 'Foundations Sent', overview.foundationsSentNames);
+                renderTooltip('foundationsInProgressTooltip', 'Foundations In Progress', overview.foundationsInProgressNames);
+                renderTooltip('foundationsCompletedTooltip', 'Foundations Completed', overview.foundationsCompletedNames);
+                renderTooltip('pendingApprovalTooltip', 'Pending Approval', overview.pendingApprovalNames);
+                renderTooltip('registeredStudentsTooltip', 'Registered Students', overview.registeredStudentsNames);
+                renderTooltip('enrolledStudentsTooltip', 'Enrolled Students', overview.enrolledStudentsNames);
+                renderTooltip('noStartFoundationsFailedTooltip', 'No Start/Foundations Failed', overview.noStartFoundationsFailedNames);
+                renderTooltip('leadsLostTooltip', 'Leads Lost / Withdrawn', overview.leadsLostWithdrawnNames);
+            }
+
+            function renderTooltip(tooltipId, title, names) {
+                const tooltip = document.getElementById(tooltipId);
+
+                if (!names || names.length === 0) {
+                    tooltip.innerHTML = `
+                        <div class="metric-tooltip-title">${title}</div>
+                        <div class="metric-tooltip-empty">No students in this category</div>
+                    `;
+                    return;
+                }
+
+                const namesList = names.map(name => `<li>${name}</li>`).join('');
+
+                tooltip.innerHTML = `
+                    <div class="metric-tooltip-title">${title} (${names.length})</div>
+                    <ul>${namesList}</ul>
+                `;
+            }
+
+            function renderConversionChart() {
+                const { conversions } = dashboardData;
+                const ctx = document.getElementById('conversionChart');
+
+                // Destroy existing chart if it exists
+                if (conversionChartInstance) {
+                    conversionChartInstance.destroy();
+                }
+
+                // Calculate dynamic Y-axis max based on highest value
+                const maxValue = Math.max(
+                    conversions.leadToFoundationsInProgress,
+                    conversions.foundationsCompleted,
+                    conversions.registered,
+                    conversions.enrolled
+                );
+
+                // Add padding and round up to nearest 10
+                let yAxisMax;
+                if (maxValue <= 5) {
+                    yAxisMax = 10;
+                } else if (maxValue <= 20) {
+                    yAxisMax = Math.ceil(maxValue / 5) * 5 + 10;
+                } else if (maxValue <= 50) {
+                    yAxisMax = Math.ceil(maxValue / 10) * 10 + 15;
+                } else {
+                    yAxisMax = Math.min(100, Math.ceil(maxValue / 10) * 10 + 10);
+                }
+
+                // Data for tooltips
+                const stageData = [
+                    {
+                        label: 'Lead --> Foundations',
+                        percent: conversions.leadToFoundationsInProgress,
+                        count: conversions.counts.leadToFoundationsInProgress,
+                        names: conversions.names.leadToFoundationsInProgress
+                    },
+                    {
+                        label: 'Foundations Completed',
+                        percent: conversions.foundationsCompleted,
+                        count: conversions.counts.foundationsCompleted,
+                        names: conversions.names.foundationsCompleted
+                    },
+                    {
+                        label: 'Registered',
+                        percent: conversions.registered,
+                        count: conversions.counts.registered,
+                        names: conversions.names.registered
+                    },
+                    {
+                        label: 'Enrolled',
+                        percent: conversions.enrolled,
+                        count: conversions.counts.enrolled,
+                        names: conversions.names.enrolled
+                    }
+                ];
+
+                conversionChartInstance = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: [
+                            'Lead --> Foundations',
+                            'Foundations Completed',
+                            'Registered',
+                            'Enrolled'
+                        ],
+                        datasets: [
+                            {
+                                label: 'Percentage of New Leads (%)',
+                                data: [
+                                    conversions.leadToFoundationsInProgress,
+                                    conversions.foundationsCompleted,
+                                    conversions.registered,
+                                    conversions.enrolled
+                                ],
+                                backgroundColor: [
+                                    'rgba(66, 153, 225, 0.7)',
+                                    'rgba(72, 187, 120, 0.7)',
+                                    'rgba(159, 122, 234, 0.7)',
+                                    'rgba(237, 137, 54, 0.7)'
+                                ]
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                enabled: false,
+                                external: function(context) {
+                                    createCustomTooltip(context, stageData);
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: yAxisMax,
+                                ticks: {
+                                    callback: (value) => value + '%'
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            function createCustomTooltip(context, stageData) {
+                // Get or create tooltip element
+                let tooltipEl = document.getElementById('chartjs-tooltip');
+
+                if (!tooltipEl) {
+                    tooltipEl = document.createElement('div');
+                    tooltipEl.id = 'chartjs-tooltip';
+                    tooltipEl.style.background = 'rgba(0, 0, 0, 0.9)';
+                    tooltipEl.style.borderRadius = '6px';
+                    tooltipEl.style.color = 'white';
+                    tooltipEl.style.opacity = '0';
+                    tooltipEl.style.pointerEvents = 'none';
+                    tooltipEl.style.position = 'absolute';
+                    tooltipEl.style.transform = 'translate(-50%, 0)';
+                    tooltipEl.style.transition = 'all .2s ease';
+                    tooltipEl.style.padding = '12px';
+                    tooltipEl.style.fontSize = '0.875rem';
+                    tooltipEl.style.zIndex = '1000';
+                    tooltipEl.style.maxWidth = '400px';
+                    tooltipEl.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
+                    document.body.appendChild(tooltipEl);
+                }
+
+                // Hide if no tooltip
+                const tooltipModel = context.tooltip;
+                if (tooltipModel.opacity === 0) {
+                    tooltipEl.style.opacity = '0';
+                    return;
+                }
+
+                // Get the data for this tooltip
+                const dataIndex = tooltipModel.dataPoints[0].dataIndex;
+                const stage = stageData[dataIndex];
+
+                // Build the tooltip content
+                let innerHtml = `
+                    <div style="font-weight: 600; margin-bottom: 8px; font-size: 1rem;">
+                        ${stage.label}
+                    </div>
+                    <div style="margin-bottom: 8px;">
+                        <strong>${stage.count}</strong> students (<strong>${stage.percent.toFixed(1)}%</strong> of new leads)
+                    </div>
+                `;
+
+                if (stage.names && stage.names.length > 0) {
+                    const namesList = stage.names.map(name => `<div style="padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.1);">${name}</div>`).join('');
+                    innerHtml += `
+                        <div style="margin-top: 8px; padding-top: 8px; border-top: 2px solid rgba(255,255,255,0.2);">
+                            <div style="font-size: 0.75rem; color: #cbd5e0; margin-bottom: 4px;">Students:</div>
+                            <div style="max-height: 200px; overflow-y: auto; font-size: 0.8rem;">
+                                ${namesList}
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    innerHtml += `
+                        <div style="margin-top: 8px; font-style: italic; color: #cbd5e0; font-size: 0.8rem;">
+                            No students in this stage
+                        </div>
+                    `;
+                }
+
+                tooltipEl.innerHTML = innerHtml;
+
+                // Position the tooltip
+                const position = context.chart.canvas.getBoundingClientRect();
+                tooltipEl.style.opacity = '1';
+                tooltipEl.style.left = position.left + window.pageXOffset + tooltipModel.caretX + 'px';
+                tooltipEl.style.top = position.top + window.pageYOffset + tooltipModel.caretY + 'px';
+            }
+
+            function renderProgramChart() {
+                const { enrollmentByProgram } = dashboardData;
+                const ctx = document.getElementById('programChart');
+
+                // Destroy existing chart if it exists
+                if (programChartInstance) {
+                    programChartInstance.destroy();
+                }
+
+                // Generate unique colors for each program
+                const colors = [
+                    'rgba(66, 153, 225, 0.7)', // Blue
+                    'rgba(159, 122, 234, 0.7)', // Purple
+                    'rgba(237, 137, 54, 0.7)', // Orange
+                    'rgba(72, 187, 120, 0.7)', // Green
+                    'rgba(245, 101, 101, 0.7)', // Red
+                    'rgba(56, 178, 172, 0.7)', // Teal
+                    'rgba(236, 72, 153, 0.7)', // Pink
+                    'rgba(251, 191, 36, 0.7)', // Yellow
+                    'rgba(139, 92, 246, 0.7)', // Indigo
+                    'rgba(52, 211, 153, 0.7)', // Emerald
+                    'rgba(248, 113, 113, 0.7)', // Rose
+                    'rgba(96, 165, 250, 0.7)' // Sky Blue
+                ];
+
+                // If there are more programs than colors, generate additional colors
+                const programColors = enrollmentByProgram.map((_, index) => {
+                    if (index < colors.length) {
+                        return colors[index];
+                    } else {
+                        // Generate a semi-random color based on index
+                        const hue = (index * 137.5) % 360;
+                        return `hsla(${hue}, 65%, 60%, 0.7)`;
+                    }
+                });
+
+                programChartInstance = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: enrollmentByProgram.map((p) => p.program),
+                        datasets: [
+                            {
+                                data: enrollmentByProgram.map((p) => p.count),
+                                backgroundColor: programColors
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'bottom' }
+                        }
+                    }
+                });
+            }
+
+            function renderFinancialChart() {
+                const { financialStatus } = dashboardData;
+                const ctx = document.getElementById('financialChart');
+
+                // Destroy existing chart if it exists
+                if (financialChartInstance) {
+                    financialChartInstance.destroy();
+                }
+
+                financialChartInstance = new Chart(ctx, {
+                    type: 'pie',
+                    data: {
+                        labels: ['Civilian', 'GI Bill', 'Both'],
+                        datasets: [
+                            {
+                                data: [
+                                    financialStatus.civilian,
+                                    financialStatus.giBill,
+                                    financialStatus.both
+                                ],
+                                backgroundColor: [
+                                    'rgba(72, 187, 120, 0.7)',
+                                    'rgba(66, 153, 225, 0.7)',
+                                    'rgba(159, 122, 234, 0.7)'
+                                ]
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'bottom' }
+                        }
+                    }
+                });
+            }
+
+            function renderStartDatesChart() {
+                const { startDates } = dashboardData;
+                const ctx = document.getElementById('startDatesChart');
+
+                // Destroy existing chart if it exists
+                if (startDatesChartInstance) {
+                    startDatesChartInstance.destroy();
+                }
+
+                startDatesChartInstance = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: startDates.map((d) =>
+                            new Date(d.date).toLocaleDateString('en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                                year: 'numeric'
+                            })
+                        ),
+                        datasets: [
+                            {
+                                label: 'Students Starting',
+                                data: startDates.map((d) => d.count),
+                                backgroundColor: 'rgba(72, 187, 120, 0.7)'
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: { precision: 0 }
+                            }
+                        }
+                    }
+                });
+            }
+
+            function renderLeadSourcesChart() {
+                const { leadSources } = dashboardData;
+                const ctx = document.getElementById('leadSourcesChart');
+
+                // Destroy existing chart if it exists
+                if (leadSourcesChartInstance) {
+                    leadSourcesChartInstance.destroy();
+                }
+
+                leadSourcesChartInstance = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: leadSources.map((s) => s.source),
+                        datasets: [
+                            {
+                                label: 'Total Leads',
+                                data: leadSources.map((s) => s.count),
+                                backgroundColor: 'rgba(66, 153, 225, 0.7)'
+                            },
+                            {
+                                label: 'Converted',
+                                data: leadSources.map((s) => s.converted),
+                                backgroundColor: 'rgba(72, 187, 120, 0.7)'
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'bottom' }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: { precision: 0 }
+                            }
+                        }
+                    }
+                });
+            }
+
+            function renderTrendsChart() {
+                const { weeklyTrends } = dashboardData;
+                const ctx = document.getElementById('trendsChart');
+
+                // Destroy existing chart if it exists
+                if (trendsChartInstance) {
+                    trendsChartInstance.destroy();
+                }
+
+                trendsChartInstance = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: weeklyTrends.map((w) => w.week),
+                        datasets: [
+                            {
+                                label: 'New Leads',
+                                data: weeklyTrends.map((w) => w.newLeads),
+                                borderColor: 'rgba(66, 153, 225, 1)',
+                                backgroundColor: 'rgba(66, 153, 225, 0.1)',
+                                tension: 0.3
+                            },
+                            {
+                                label: 'Enrolled',
+                                data: weeklyTrends.map((w) => w.enrolled),
+                                borderColor: 'rgba(72, 187, 120, 1)',
+                                backgroundColor: 'rgba(72, 187, 120, 0.1)',
+                                tension: 0.3
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'bottom' }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: { precision: 0 }
+                            }
+                        }
+                    }
+                });
+            }
+
+            function renderCounselorTable() {
+                const { counselors } = dashboardData;
+                const tbody = document.getElementById('counselorTableBody');
+
+                if (!counselors || counselors.length === 0) {
+                    tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 2rem; color: #9ca3af;">
+                            No counselor data available. Counselor assignments will appear here once synced from Airtable.
+                        </td>
+                    </tr>
+                `;
+                    return;
+                }
+
+                tbody.innerHTML = counselors
+                    .map((c) => {
+                        const contactRateBadge =
+                            c.contactRate >= 90
+                                ? 'high'
+                                : c.contactRate >= 80
+                                ? 'medium'
+                                : 'low';
+                        const conversionRateBadge =
+                            c.conversionRate >= 23
+                                ? 'high'
+                                : c.conversionRate >= 18
+                                ? 'medium'
+                                : 'low';
+
+                        return `
+                    <tr>
+                        <td><strong>${c.name}</strong></td>
+                        <td>${c.leadsAssigned}</td>
+                        <td>
+                            <span class="rate-badge ${contactRateBadge}">${c.contactRate.toFixed(
+                            1
+                        )}%</span>
+                            <span style="font-size: 0.75rem; color: #9ca3af;"> (${
+                                c.contacted24hrs
+                            }/${c.leadsAssigned})</span>
+                        </td>
+                        <td>
+                            <span class="rate-badge ${conversionRateBadge}">${c.conversionRate.toFixed(
+                            1
+                        )}%</span>
+                        </td>
+                        <td>${c.enrolled}</td>
+                        <td>${c.avgDaysToEnrollment} days</td>
+                    </tr>
+                `;
+                    })
+                    .join('');
+            }
+
+            async function handleLogout() {
+                const token = localStorage.getItem('auth_token');
+                await fetch('/.netlify/functions/auth-logout', {
+                    method: 'POST',
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                localStorage.removeItem('auth_token');
+                localStorage.removeItem('user');
+                window.location.href = '/login.html';
+            }
+
+            async function syncAirtableData() {
+                const token = localStorage.getItem('auth_token');
+                const button = document.getElementById('syncButton');
+                const buttonText = document.getElementById('syncButtonText');
+
+                // Disable button and show loading state
+                button.disabled = true;
+                buttonText.textContent = 'Syncing...';
+
+                try {
+                    const response = await fetch(
+                        '/.netlify/functions/sync-admissions-airtable',
+                        {
+                            method: 'POST',
+                            headers: { Authorization: `Bearer ${token}` }
+                        }
+                    );
+
+                    if (!response.ok) {
+                        throw new Error('Sync failed');
+                    }
+
+                    const result = await response.json();
+
+                    // Show success message
+                    buttonText.textContent = `Synced! ${result.stats.created} created, ${result.stats.updated} updated`;
+
+                    // Reload dashboard data
+                    await loadDashboard();
+
+                    // Reset button after 3 seconds
+                    setTimeout(() => {
+                        button.disabled = false;
+                        buttonText.textContent = 'Sync All from Airtable';
+                    }, 3000);
+                } catch (err) {
+                    console.error('Sync error:', err);
+                    buttonText.textContent = 'Sync Failed - Try Again';
+                    button.disabled = false;
+                }
+            }
+
+            async function runMigration() {
+                const token = localStorage.getItem('auth_token');
+                const button = document.getElementById('migrateButton');
+                const buttonText = document.getElementById('migrateButtonText');
+
+                // Confirm before running
+                const confirmed = confirm(
+                    'This will update all existing records with correct Airtable dates and field mappings.\n\n' +
+                    'This is a ONE-TIME operation and may take a few minutes.\n\n' +
+                    'Continue?'
+                );
+
+                if (!confirmed) return;
+
+                // Disable button and show loading state
+                button.disabled = true;
+                buttonText.textContent = 'Migrating... (this may take a while)';
+
+                try {
+                    const response = await fetch(
+                        '/.netlify/functions/migrate-airtable-dates',
+                        {
+                            method: 'POST',
+                            headers: { Authorization: `Bearer ${token}` }
+                        }
+                    );
+
+                    if (!response.ok) {
+                        throw new Error('Migration failed');
+                    }
+
+                    const result = await response.json();
+
+                    // Show success message
+                    alert(
+                        `Migration completed!\n\n` +
+                        `Total: ${result.stats.total}\n` +
+                        `Updated: ${result.stats.updated}\n` +
+                        `Skipped: ${result.stats.skipped}\n` +
+                        `Errors: ${result.stats.errors.length}\n\n` +
+                        `The dashboard will now reload with updated data.`
+                    );
+
+                    // Reload dashboard data
+                    await loadDashboard();
+
+                    // Hide the migration button (only needed once)
+                    button.style.display = 'none';
+
+                } catch (err) {
+                    console.error('Migration error:', err);
+                    alert(`Migration failed: ${err.message}\n\nPlease try again or contact support.`);
+                    button.disabled = false;
+                    buttonText.textContent = 'Migrate Historical Data';
+                }
+            }
+
+            // Initialize filter UI
+            function initializeFilters() {
+                // Populate year dropdown
+                const yearSelect = document.getElementById('filterYear');
+                const currentYear = new Date().getFullYear();
+                for (let year = currentYear; year >= currentYear - 5; year--) {
+                    const option = document.createElement('option');
+                    option.value = year;
+                    option.textContent = year;
+                    yearSelect.appendChild(option);
+                }
+
+                // Set default to current month
+                const now = new Date();
+                document.getElementById('filterMonth').value = now.getMonth() + 1;
+                document.getElementById('filterYear').value = currentYear;
+            }
+
+            function toggleFilterInputs() {
+                const filterType = document.getElementById('filterType').value;
+                const monthSelector = document.getElementById('monthSelector');
+                const rangeSelector = document.getElementById('rangeSelector');
+
+                if (filterType === 'month') {
+                    monthSelector.style.display = 'flex';
+                    rangeSelector.style.display = 'none';
+                } else {
+                    monthSelector.style.display = 'none';
+                    rangeSelector.style.display = 'flex';
+                }
+            }
+
+            async function applyDateFilter() {
+                const filterMode = document.getElementById('filterMode').value;
+                const filterType = document.getElementById('filterType').value;
+
+                let statusText = '';
+
+                if (filterType === 'month') {
+                    const month = document.getElementById('filterMonth').value;
+                    const year = document.getElementById('filterYear').value;
+                    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                                       'July', 'August', 'September', 'October', 'November', 'December'];
+                    statusText = `${monthNames[month - 1]} ${year}`;
+                } else {
+                    const startDate = document.getElementById('startDate').value;
+                    const endDate = document.getElementById('endDate').value;
+                    statusText = `${startDate} to ${endDate}`;
+                }
+
+                const modeText = filterMode === 'created' ? 'New Leads' : 'Snapshot';
+                const explanation = filterMode === 'created'
+                    ? 'Total Leads = created in period, Status = as of end date'
+                    : 'All metrics as of end date';
+                document.getElementById('filterStatus').textContent = `Showing: ${statusText} - ${modeText} (${explanation})`;
+
+                // Reload dashboard with filter
+                await loadDashboard();
+            }
+
+            async function clearDateFilter() {
+                // Reset to current month
+                const now = new Date();
+                document.getElementById('filterMode').value = 'created';
+                document.getElementById('filterType').value = 'month';
+                document.getElementById('filterMonth').value = now.getMonth() + 1;
+                document.getElementById('filterYear').value = now.getFullYear();
+                document.getElementById('startDate').value = '';
+                document.getElementById('endDate').value = '';
+
+                toggleFilterInputs();
+                document.getElementById('filterStatus').textContent = 'Showing: This Month - New Leads (Total Leads = created in period, Status = as of end date)';
+
+                // Reload dashboard
+                await loadDashboard();
+            }
+
+            // Check authentication on page load
+            initializeFilters();
+            checkAuth();
+        </script>
+    </body>
+</html>

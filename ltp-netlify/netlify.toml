@@ -24,3 +24,7 @@
 # Google Ads scheduled sync - runs daily at 2 AM UTC
 [functions."google-ads-sync"]
   schedule = "0 2 * * *"
+
+# Admissions Airtable sync - runs daily at 3 AM UTC
+[functions."sync-admissions-airtable"]
+  schedule = "0 3 * * *"

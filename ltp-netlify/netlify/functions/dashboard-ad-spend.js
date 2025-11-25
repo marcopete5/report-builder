@@ -188,18 +188,125 @@ function calculatePeriodMetrics(dailyData) {
     const impressions = dailyData.reduce((sum, d) => sum + d.impressions, 0);
     const clicks = dailyData.reduce((sum, d) => sum + d.clicks, 0);
     const cost = dailyData.reduce((sum, d) => sum + d.cost, 0);
-    const leads = dailyData.reduce((sum, d) => sum + d.leads, 0);
-    const conversions = dailyData.reduce((sum, d) => sum + d.conversions, 0);
+    const interviews = dailyData.reduce((sum, d) => sum + (d.interviews || 0), 0);
+    const contacts = dailyData.reduce((sum, d) => sum + (d.contacts || 0), 0);
+    const leads = interviews + contacts; // Total leads = interviews + contacts
+    const conversions = dailyData.reduce((sum, d) => sum + (d.conversions || 0), 0);
 
     const cvr = clicks > 0 ? ((leads / clicks) * 100) : 0;
     const cpa = leads > 0 ? (cost / leads) : 0;
+    const cpi = interviews > 0 ? (cost / interviews) : 0; // Cost per interview
+    const cpc_contact = contacts > 0 ? (cost / contacts) : 0; // Cost per contact
 
     return {
         impressions,
         clicks,
         cost: parseFloat(cost.toFixed(2)),
-        leads,
+        interviews,
+        contacts,
+        leads, // Total leads
         conversions,
+        cvr: parseFloat(cvr.toFixed(2)),
+        cpa: parseFloat(cpa.toFixed(2)),
+        cpi: parseFloat(cpi.toFixed(2)),
+        cpc_contact: parseFloat(cpc_contact.toFixed(2))
+    };
+}
+
+/**
+ * Generate metrics for a specific conversion type
+ * Uses ALL campaign data for impressions/clicks/cost
+ * But only counts specific conversion type for leads/CPA
+ */
+function generateConversionTypeMetrics(conversionType, currentData, comparisonData) {
+    // Calculate metrics based on conversion type
+    const currentMetrics = calculateMetricsByConversionType(currentData, conversionType);
+    const comparisonMetrics = calculateMetricsByConversionType(comparisonData, conversionType);
+
+    const wowChanges = {
+        cost: calculateWoWChange(currentMetrics.cost, comparisonMetrics.cost),
+        leads: calculateWoWChange(currentMetrics.leads, comparisonMetrics.leads),
+        cvr: calculateWoWChange(currentMetrics.cvr, comparisonMetrics.cvr),
+        cpa: calculateWoWChange(currentMetrics.cpa, comparisonMetrics.cpa)
+    };
+
+    // Generate daily chart data for BOTH current and comparison periods
+    const currentDailyData = currentData.map(d => ({
+        date: d.date instanceof Date ? d.date.toISOString().split('T')[0] : String(d.date).split('T')[0],
+        metric1: conversionType === 'general' ? (d.interviews || 0) + (d.contacts || 0) :
+                 conversionType === 'interviews' ? (d.interviews || 0) : (d.contacts || 0),
+        metric2: d.clicks || 0
+    }));
+
+    const comparisonDailyData = comparisonData.map(d => ({
+        date: d.date instanceof Date ? d.date.toISOString().split('T')[0] : String(d.date).split('T')[0],
+        metric1: conversionType === 'general' ? (d.interviews || 0) + (d.contacts || 0) :
+                 conversionType === 'interviews' ? (d.interviews || 0) : (d.contacts || 0),
+        metric2: d.clicks || 0
+    }));
+
+    return {
+        current: currentMetrics,
+        comparison: comparisonMetrics,
+        wowChanges,
+        dailyData: {
+            current: currentDailyData,
+            comparison: comparisonDailyData
+        }
+    };
+}
+
+/**
+ * Calculate metrics for a specific conversion type
+ * Cost is allocated proportionally based on conversion share
+ * e.g., if 70% of conversions were interviews, interviews get 70% of cost
+ */
+function calculateMetricsByConversionType(dailyData, conversionType) {
+    let totalImpressions = 0;
+    let totalClicks = 0;
+    let totalCost = 0;
+    let leads = 0;
+
+    // Calculate totals and allocate cost based on conversion share
+    dailyData.forEach(d => {
+        const dayInterviews = d.interviews || 0;
+        const dayContacts = d.contacts || 0;
+        const dayTotalConversions = dayInterviews + dayContacts;
+        const dayCost = d.cost || 0;
+
+        if (conversionType === 'general') {
+            // General = all data, all conversions
+            totalImpressions += d.impressions || 0;
+            totalClicks += d.clicks || 0;
+            totalCost += dayCost;
+            leads += dayTotalConversions;
+        } else if (conversionType === 'interviews') {
+            // Allocate cost proportionally to interview conversions
+            totalImpressions += d.impressions || 0;
+            totalClicks += d.clicks || 0;
+            if (dayTotalConversions > 0) {
+                totalCost += dayCost * (dayInterviews / dayTotalConversions);
+            }
+            leads += dayInterviews;
+        } else if (conversionType === 'contacts') {
+            // Allocate cost proportionally to contact conversions
+            totalImpressions += d.impressions || 0;
+            totalClicks += d.clicks || 0;
+            if (dayTotalConversions > 0) {
+                totalCost += dayCost * (dayContacts / dayTotalConversions);
+            }
+            leads += dayContacts;
+        }
+    });
+
+    const cvr = totalClicks > 0 ? ((leads / totalClicks) * 100) : 0;
+    const cpa = leads > 0 ? (totalCost / leads) : 0;
+
+    return {
+        impressions: totalImpressions,
+        clicks: totalClicks,
+        cost: parseFloat(totalCost.toFixed(2)),
+        leads,
         cvr: parseFloat(cvr.toFixed(2)),
         cpa: parseFloat(cpa.toFixed(2))
     };
@@ -236,12 +343,19 @@ function generateCampaignMetrics(campaignType, currentData, comparisonData) {
             cvr: calculateWoWChange(currentMetrics.cvr, comparisonMetrics.cvr),
             cpa: calculateWoWChange(currentMetrics.cpa, comparisonMetrics.cpa)
         },
-        // Generate daily chart data
-        dailyData: currentData.map(d => ({
-            date: d.date,
-            metric1: Math.floor(d.clicks * factor * 0.8),
-            metric2: Math.floor(d.conversions * factor * 1.2)
-        }))
+        // Generate daily chart data for BOTH current and comparison periods
+        dailyData: {
+            current: currentData.map(d => ({
+                date: d.date,
+                metric1: Math.floor(d.clicks * factor * 0.8),
+                metric2: Math.floor(d.conversions * factor * 1.2)
+            })),
+            comparison: comparisonData.map(d => ({
+                date: d.date,
+                metric1: Math.floor(d.clicks * factor * 0.7), // Slightly different for comparison
+                metric2: Math.floor(d.conversions * factor * 1.1)
+            }))
+        }
     };
 }
 
@@ -343,9 +457,9 @@ exports.handler = async (event) => {
                         cpa: 0
                     },
                     campaignBreakdown: {
-                        general: { current: { cost: 0, leads: 0, cvr: 0, cpa: 0 }, wowChanges: {}, dailyData: [] },
-                        interviews: { current: { cost: 0, leads: 0, cvr: 0, cpa: 0 }, wowChanges: {}, dailyData: [] },
-                        contacts: { current: { cost: 0, leads: 0, cvr: 0, cpa: 0 }, wowChanges: {}, dailyData: [] }
+                        general: { current: { cost: 0, leads: 0, cvr: 0, cpa: 0 }, wowChanges: {}, dailyData: { current: [], comparison: [] } },
+                        interviews: { current: { cost: 0, leads: 0, cvr: 0, cpa: 0 }, wowChanges: {}, dailyData: { current: [], comparison: [] } },
+                        contacts: { current: { cost: 0, leads: 0, cvr: 0, cpa: 0 }, wowChanges: {}, dailyData: { current: [], comparison: [] } }
                     },
                     studentMetrics: {
                         foundationsStarted: { value: 0, wowChange: 0 },
@@ -367,11 +481,18 @@ exports.handler = async (event) => {
         const platform = q.platform || null;
         const campaign = q.campaign || null;
 
-        // Build query filter
+        // Build query filter with proper date range (inclusive of full days)
+        // Set start to beginning of day, end to end of day
+        const queryStartDate = new Date(comparisonStartDate);
+        queryStartDate.setUTCHours(0, 0, 0, 0);
+
+        const queryEndDate = new Date(endDate);
+        queryEndDate.setUTCHours(23, 59, 59, 999);
+
         const filter = {
             date: {
-                $gte: new Date(comparisonStartDate),
-                $lte: new Date(endDate)
+                $gte: queryStartDate,
+                $lte: queryEndDate
             }
         };
 
@@ -389,15 +510,24 @@ exports.handler = async (event) => {
             .sort({ date: 1 })
             .toArray();
 
-        // Split into current and comparison periods
+        // Helper function to normalize dates for comparison (avoid timezone issues)
+        const normalizeDateString = (date) => {
+            if (!date) return '';
+            if (date instanceof Date) {
+                return date.toISOString().split('T')[0];
+            }
+            return String(date).split('T')[0];
+        };
+
+        // Split into current and comparison periods using string comparison
         const currentPeriodData = allData.filter(d => {
-            const date = new Date(d.date);
-            return date >= new Date(startDate) && date <= new Date(endDate);
+            const dateStr = normalizeDateString(d.date);
+            return dateStr >= startDate && dateStr <= endDate;
         });
 
         const comparisonPeriodData = allData.filter(d => {
-            const date = new Date(d.date);
-            return date >= new Date(comparisonStartDate) && date <= new Date(comparisonEndDate);
+            const dateStr = normalizeDateString(d.date);
+            return dateStr >= comparisonStartDate && dateStr <= comparisonEndDate;
         });
 
         // Calculate metrics for both periods
@@ -409,29 +539,26 @@ exports.handler = async (event) => {
             impressions: calculateWoWChange(currentMetrics.impressions, comparisonMetrics.impressions),
             clicks: calculateWoWChange(currentMetrics.clicks, comparisonMetrics.clicks),
             cost: calculateWoWChange(currentMetrics.cost, comparisonMetrics.cost),
+            interviews: calculateWoWChange(currentMetrics.interviews, comparisonMetrics.interviews),
+            contacts: calculateWoWChange(currentMetrics.contacts, comparisonMetrics.contacts),
             leads: calculateWoWChange(currentMetrics.leads, comparisonMetrics.leads),
             cvr: calculateWoWChange(currentMetrics.cvr, comparisonMetrics.cvr),
-            cpa: calculateWoWChange(currentMetrics.cpa, comparisonMetrics.cpa)
+            cpa: calculateWoWChange(currentMetrics.cpa, comparisonMetrics.cpa),
+            cpi: calculateWoWChange(currentMetrics.cpi, comparisonMetrics.cpi),
+            cpc_contact: calculateWoWChange(currentMetrics.cpc_contact, comparisonMetrics.cpc_contact)
         };
 
-        // Get campaign breakdowns (you'll need to add campaign_type field to your data)
-        const campaignTypes = ['interviews', 'contacts', 'general'];
-        const campaignBreakdown = {};
-
-        for (const type of campaignTypes) {
-            const currentCampaignData = currentPeriodData.filter(d =>
-                (d.campaign_type || 'general').toLowerCase() === type
-            );
-            const comparisonCampaignData = comparisonPeriodData.filter(d =>
-                (d.campaign_type || 'general').toLowerCase() === type
-            );
-
-            campaignBreakdown[type] = generateCampaignMetrics(
-                type,
-                currentCampaignData.length > 0 ? currentCampaignData : currentPeriodData,
-                comparisonCampaignData.length > 0 ? comparisonCampaignData : comparisonPeriodData
-            );
-        }
+        // Calculate breakdowns by conversion type
+        // All sections use the same campaign data (impressions/clicks/cost)
+        // but show different conversion metrics
+        const campaignBreakdown = {
+            // Overall Performance: all impressions, clicks, cost, all conversions
+            general: generateConversionTypeMetrics('general', currentPeriodData, comparisonPeriodData),
+            // Interviews: same impressions/clicks/cost, but only interview conversions
+            interviews: generateConversionTypeMetrics('interviews', currentPeriodData, comparisonPeriodData),
+            // Contacts: same impressions/clicks/cost, but only contact conversions
+            contacts: generateConversionTypeMetrics('contacts', currentPeriodData, comparisonPeriodData)
+        };
 
         // Get student metrics from database or use placeholder
         // TODO: Connect to real student metrics source

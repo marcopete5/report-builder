@@ -4,22 +4,34 @@
 const { getDb } = require('./utils/database');
 const { getCorsHeaders } = require('./utils/cors');
 const { requireAdmin } = require('./utils/db-auth');
-const { getCampaignPerformance } = require('./utils/google-ads-client');
+const { getCampaignPerformance, getCampaignPerformanceWithConversions } = require('./utils/google-ads-client');
 
 /**
- * Classify campaign based on name
- * Customize this logic based on your campaign naming conventions
+ * Classify conversion action as interview, contact, or other
+ * Based on conversion action names from Google Ads
  */
-function classifyCampaign(campaignName) {
-    const name = campaignName.toLowerCase();
+function classifyConversionAction(conversionActionName) {
+    if (!conversionActionName) return 'other';
 
-    if (name.includes('interview')) {
+    const name = conversionActionName.toLowerCase();
+
+    // Interview conversions: appointment scheduling
+    if (name.includes('appointment_scheduled') ||
+        name.includes('calendly_scheduled') ||
+        name.includes('interview') ||
+        name.includes('schedule')) {
         return 'interviews';
     }
-    if (name.includes('contact')) {
+
+    // Contact conversions: form submissions, applications
+    if (name.includes('apply_complete') ||
+        name.includes('contact') ||
+        name.includes('form_submit') ||
+        name.includes('lead_form')) {
         return 'contacts';
     }
-    return 'general';
+
+    return 'other';
 }
 
 /**
@@ -49,13 +61,13 @@ function parseGoogleAdsDate(dateStr) {
  */
 async function syncGoogleAdsData(startDate, endDate) {
     try {
-        // Fetch campaign performance from Google Ads
-        console.log(`Fetching Google Ads data from ${startDate} to ${endDate}...`);
-        const campaignData = await getCampaignPerformance(startDate, endDate);
+        // Fetch campaign performance with conversion breakdown from Google Ads
+        console.log(`Fetching Google Ads data with conversion breakdown from ${startDate} to ${endDate}...`);
+        const data = await getCampaignPerformanceWithConversions(startDate, endDate);
 
-        console.log(`Received ${campaignData ? campaignData.length : 0} records from Google Ads API`);
+        console.log(`Received ${data.performance?.length || 0} performance records and ${data.conversions?.length || 0} conversion records`);
 
-        if (!campaignData || campaignData.length === 0) {
+        if (!data.performance || data.performance.length === 0) {
             console.log('No campaign data found for this date range');
             return {
                 success: true,
@@ -65,6 +77,50 @@ async function syncGoogleAdsData(startDate, endDate) {
                 recordsUpdated: 0,
                 dateRange: { startDate, endDate }
             };
+        }
+
+        // Start with performance data (impressions, clicks, cost)
+        const aggregatedData = {};
+
+        for (const perf of data.performance) {
+            const key = `${perf.date}_${perf.campaignId}`;
+            aggregatedData[key] = {
+                date: perf.date,
+                campaignId: perf.campaignId,
+                campaignName: perf.campaignName,
+                campaignStatus: perf.campaignStatus,
+                impressions: perf.impressions,
+                clicks: perf.clicks,
+                cost: perf.cost,
+                interviews: 0,
+                contacts: 0,
+                otherConversions: 0,
+                conversionsValue: 0
+            };
+        }
+
+        // Add conversion data by type
+        for (const conv of data.conversions) {
+            const key = `${conv.date}_${conv.campaignId}`;
+
+            // Skip if no performance data for this key (shouldn't happen)
+            if (!aggregatedData[key]) {
+                console.warn(`No performance data for ${key}, skipping conversion`);
+                continue;
+            }
+
+            // Classify and aggregate conversions by type
+            const conversionType = classifyConversionAction(conv.conversionActionName);
+
+            if (conversionType === 'interviews') {
+                aggregatedData[key].interviews += conv.conversions;
+            } else if (conversionType === 'contacts') {
+                aggregatedData[key].contacts += conv.conversions;
+            } else {
+                aggregatedData[key].otherConversions += conv.conversions;
+            }
+
+            aggregatedData[key].conversionsValue += conv.conversionsValue;
         }
 
         // Connect to MongoDB
@@ -83,18 +139,32 @@ async function syncGoogleAdsData(startDate, endDate) {
         let recordsUpdated = 0;
         let errors = [];
 
-        // Process each campaign data point
-        for (const data of campaignData) {
+        // Process each aggregated data point
+        for (const data of Object.values(aggregatedData)) {
             try {
+                // Determine campaign type based on which conversion type is dominant
+                let campaign_type = 'general';
+                if (data.interviews > data.contacts) {
+                    campaign_type = 'interviews';
+                } else if (data.contacts > 0) {
+                    campaign_type = 'contacts';
+                }
+
                 const document = {
                     date: parseGoogleAdsDate(data.date),
                     impressions: data.impressions,
                     clicks: data.clicks,
                     cost: data.cost,
-                    leads: data.conversions, // Assuming conversions are leads
-                    conversions: data.conversions,
+                    // Leads = interviews + contacts
+                    leads: data.interviews + data.contacts,
+                    // Store separate conversion types
+                    interviews: data.interviews,
+                    contacts: data.contacts,
+                    other_conversions: data.otherConversions,
+                    // Total conversions for compatibility
+                    conversions: data.interviews + data.contacts + data.otherConversions,
                     revenue: data.conversionsValue || 0,
-                    campaign_type: classifyCampaign(data.campaignName),
+                    campaign_type: campaign_type,
                     campaign: data.campaignName,
                     campaign_id: data.campaignId,
                     campaign_status: data.campaignStatus,
@@ -134,9 +204,9 @@ async function syncGoogleAdsData(startDate, endDate) {
 
         return {
             success: true,
-            message: 'Google Ads data synced successfully',
+            message: 'Google Ads data synced successfully with conversion type breakdown',
             dateRange: { startDate, endDate },
-            recordsProcessed: campaignData.length,
+            recordsProcessed: Object.keys(aggregatedData).length,
             recordsInserted,
             recordsUpdated,
             errors: errors.length > 0 ? errors : undefined
@@ -181,9 +251,10 @@ exports.handler = async (event) => {
     try {
         const q = event.queryStringParameters || {};
 
-        // Default to last 7 days if no range specified
+        // Default to last 90 days if no range specified
+        // This ensures we maintain enough historical data for month-over-month and year-over-year comparisons
         const endDate = q.endDate || new Date().toISOString().split('T')[0];
-        const startDate = q.startDate || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+        const startDate = q.startDate || new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
         console.log(`Starting Google Ads sync for ${startDate} to ${endDate}`);
 

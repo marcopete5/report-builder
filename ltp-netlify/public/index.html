@@ -4,12 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LTP Reports - Dashboard</title>
+    <link rel="stylesheet" href="/global.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script src="/navbar.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            font-family: var(--font-family-primary);
             background: #f5f7fa;
             color: #2d3748;
         }
@@ -201,6 +202,31 @@
             margin-top: 20px;
             height: 300px;
         }
+        .student-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .student-header-profile-pic {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid #e2e8f0;
+            flex-shrink: 0;
+        }
+        .student-header-profile-placeholder {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            flex-shrink: 0;
+        }
     </style>
 </head>
 <body>
@@ -217,6 +243,11 @@
                 <div id="admin-content" style="display: none;">
                     <p style="margin-bottom: 1.5rem;">You have admin access. Here are your available tools:</p>
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                        <a href="/dashboard-education.html" style="display: block; padding: 1.5rem; background: #f7fafc; border: 1px solid #e2e8f0; border-radius: 0.5rem; text-decoration: none; color: inherit; transition: all 0.2s;" onmouseover="this.style.background='#edf2f7'; this.style.borderColor='#cbd5e0'" onmouseout="this.style.background='#f7fafc'; this.style.borderColor='#e2e8f0'">
+                            <div style="font-size: 2rem; margin-bottom: 0.5rem;">📚</div>
+                            <div style="font-weight: 600; font-size: 1.1rem; margin-bottom: 0.25rem;">Education Dashboard</div>
+                            <div style="color: #718096; font-size: 0.875rem;">Comprehensive student progress and enrollment overview</div>
+                        </a>
                         <a href="/admin-users.html" style="display: block; padding: 1.5rem; background: #f7fafc; border: 1px solid #e2e8f0; border-radius: 0.5rem; text-decoration: none; color: inherit; transition: all 0.2s;" onmouseover="this.style.background='#edf2f7'; this.style.borderColor='#cbd5e0'" onmouseout="this.style.background='#f7fafc'; this.style.borderColor='#e2e8f0'">
                             <div style="font-size: 2rem; margin-bottom: 0.5rem;">👥</div>
                             <div style="font-weight: 600; font-size: 1.1rem; margin-bottom: 0.25rem;">Manage Users</div>
@@ -236,6 +267,10 @@
                     <div style="padding: 1rem; background: #edf2f7; border-radius: 0.5rem; border: 1px solid #cbd5e0;">
                         <h3 style="margin: 0 0 0.5rem; font-size: 1rem;">Quick Actions</h3>
                         <button class="btn btn-primary" onclick="syncStudents()">🔄 Sync Students from Entries</button>
+                    </div>
+                    <div id="superadmin-actions" style="padding: 1rem; background: #fef3c7; border-radius: 0.5rem; border: 1px solid #fbbf24; margin-top: 1rem; display: none;">
+                        <h3 style="margin: 0 0 0.5rem; font-size: 1rem; color: #92400e;">Superadmin Actions</h3>
+                        <button class="btn btn-primary" onclick="refreshAirtable()">🔄 Refresh All Airtable Data</button>
                     </div>
                 </div>
                 <div id="student-content" style="display: none;">
@@ -287,6 +322,7 @@
             const adminContent = document.getElementById('admin-content');
             const studentContent = document.getElementById('student-content');
             const navbarContainer = document.getElementById('navbar-container');
+            const superadminActions = document.getElementById('superadmin-actions');
 
             // Render navbar
             navbarContainer.innerHTML = getNavbarHTML(user);
@@ -299,6 +335,11 @@
             if (user.role === 'superadmin' || user.role === 'admin') {
                 adminContent.style.display = 'block';
                 studentContent.style.display = 'none';
+
+                // Show superadmin actions only for superadmins
+                if (user.role === 'superadmin') {
+                    superadminActions.style.display = 'block';
+                }
             } else if (user.role === 'student') {
                 adminContent.style.display = 'none';
                 studentContent.style.display = 'block';
@@ -341,13 +382,53 @@
             }
         }
 
+        async function refreshAirtable() {
+            if (!confirm('This will refresh all student data from Airtable. This may take a few moments. Continue?')) return;
+
+            const token = localStorage.getItem('auth_token');
+
+            try {
+                const response = await fetch('/.netlify/functions/refresh-airtable', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Refresh failed');
+                }
+
+                let message = `Airtable refresh completed!\n\nTotal: ${data.total}\nUpdated: ${data.updated}\nFailed: ${data.failed}\nSkipped: ${data.skipped}`;
+
+                if (data.failedStudents && data.failedStudents.length > 0) {
+                    message += '\n\nFailed students:\n';
+                    data.failedStudents.forEach(s => {
+                        message += `- ${s.studentName} (${s.studentId}): ${s.error}\n`;
+                    });
+                }
+
+                if (data.skippedStudents && data.skippedStudents.length > 0) {
+                    message += '\n\nSkipped students:\n';
+                    data.skippedStudents.forEach(s => {
+                        message += `- ${s.studentName} (${s.studentId || 'No ID'}): ${s.reason}\n`;
+                    });
+                }
+
+                alert(message);
+            } catch (err) {
+                alert('Error refreshing Airtable data: ' + err.message);
+            }
+        }
+
         async function loadMyReport() {
             const reportDiv = document.getElementById('student-report');
             const token = localStorage.getItem('auth_token');
             reportDiv.innerHTML = '<p>Loading your comprehensive report...</p>';
 
             try {
-                const response = await fetch('/.netlify/functions/my-report?days=30', {
+                const response = await fetch('/.netlify/functions/my-report?days=all', {
                     headers: {
                         'Authorization': `Bearer ${token}`
                     }
@@ -378,8 +459,17 @@
                 };
 
                 // Build comprehensive report HTML
+                const profilePicHtml = data.student.profilePictureUrl
+                    ? `<img src="${data.student.profilePictureUrl}" alt="${data.student.studentName || 'Student'}" class="student-header-profile-pic">`
+                    : '<div class="student-header-profile-placeholder">👤</div>';
+
                 let html = `
-                    <h2 style="margin-bottom: 1.5rem; font-size: 1.75rem; color: #2d3748; font-weight: 600;">${data.student.studentName || 'Student'}</h2>
+                    <div class="student-header">
+                        ${profilePicHtml}
+                        <div>
+                            <h2 style="margin: 0; font-size: 1.75rem; color: #2d3748; font-weight: 600;">${data.student.studentName || 'Student'}</h2>
+                        </div>
+                    </div>
 
                     <div class="report-grid">
                         <div class="card">
@@ -499,7 +589,7 @@
                     </div>
 
                     <div class="card" style="margin-top: 1.5rem;">
-                        <h3 style="margin-bottom: 1rem; font-size: 1.1rem;">Activity Timeline (Last 30 Days)</h3>
+                        <h3 style="margin-bottom: 1rem; font-size: 1.1rem;">Activity Timeline (Full Period)</h3>
                         <div class="chart-container">
                             <canvas id="student-activity-chart"></canvas>
                         </div>
@@ -520,7 +610,7 @@
             const ctx = document.getElementById('student-activity-chart');
             if (!ctx) return;
 
-            const labels = dailySeries.map(d => d.date);
+            const labels = dailySeries.map(d => new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }));
             const storyPoints = dailySeries.map(d => d.storyPoints || 0);
 
             new Chart(ctx, {

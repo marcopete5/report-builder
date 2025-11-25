@@ -1,0 +1,40 @@
+/* Global Styles - LTP Reports */
+/* Import Elms Sans font from Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap');
+
+/* CSS Custom Properties (Variables) */
+:root {
+    /* Typography */
+    --font-family-primary: 'DM Sans', sans-serif;
+    --font-family-mono: ui-monospace, SFMono-Regular, Menlo, Consolas,
+        'Liberation Mono', monospace;
+
+    /* Font weights */
+    --font-weight-normal: 500;
+    --font-weight-medium: 600;
+    --font-weight-semibold: 700;
+    --font-weight-bold: 800;
+
+    /* Colors */
+    --color-text: #2d3748;
+    --color-text-muted: #718096;
+    --color-text-light: #a0aec0;
+    --color-background: #f5f7fa;
+    --color-white: #ffffff;
+    --color-border: #e5e7eb;
+    --color-primary: #4299e1;
+    --color-primary-hover: #3182ce;
+}
+
+/* Base styles */
+body {
+    font-family: var(--font-family-primary);
+    font-optical-sizing: auto;
+    font-weight: var(--font-weight-normal);
+    font-style: normal;
+}
+
+/* Utility class for monospace text */
+.mono {
+    font-family: var(--font-family-mono);
+}

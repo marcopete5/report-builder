@@ -345,12 +345,99 @@ async function testConnection() {
     }
 }
 
+/**
+ * Get campaign performance with conversion action breakdown
+ * This requires two separate queries due to Google Ads API restrictions
+ * @param {string} startDate - Start date in YYYY-MM-DD format
+ * @param {string} endDate - End date in YYYY-MM-DD format
+ * @returns {Promise<Object>} Campaign performance and conversion data
+ */
+async function getCampaignPerformanceWithConversions(startDate, endDate) {
+    const formattedStartDate = startDate.replace(/-/g, '');
+    const formattedEndDate = endDate.replace(/-/g, '');
+
+    // Query 1: Get campaign performance metrics (impressions, clicks, cost)
+    const performanceQuery = `
+        SELECT
+            campaign.id,
+            campaign.name,
+            campaign.status,
+            segments.date,
+            metrics.impressions,
+            metrics.clicks,
+            metrics.cost_micros
+        FROM campaign
+        WHERE segments.date BETWEEN '${formattedStartDate}' AND '${formattedEndDate}'
+            AND campaign.status != 'REMOVED'
+        ORDER BY segments.date ASC
+    `;
+
+    // Query 2: Get conversion breakdown by action
+    const conversionsQuery = `
+        SELECT
+            campaign.id,
+            campaign.name,
+            segments.date,
+            segments.conversion_action_name,
+            metrics.conversions,
+            metrics.conversions_value
+        FROM campaign
+        WHERE segments.date BETWEEN '${formattedStartDate}' AND '${formattedEndDate}'
+            AND campaign.status != 'REMOVED'
+        ORDER BY segments.date ASC
+    `;
+
+    const [performanceResults, conversionResults] = await Promise.all([
+        executeQuery(performanceQuery),
+        executeQuery(conversionsQuery)
+    ]);
+
+    // Transform performance data
+    const performanceData = performanceResults.map(row => {
+        const campaign = row.campaign || {};
+        const segments = row.segments || {};
+        const metrics = row.metrics || {};
+
+        return {
+            campaignId: campaign.id,
+            campaignName: campaign.name,
+            campaignStatus: campaign.status,
+            date: segments.date,
+            impressions: parseInt(metrics.impressions) || 0,
+            clicks: parseInt(metrics.clicks) || 0,
+            cost: parseFloat(metrics.costMicros) / 1000000 || 0
+        };
+    });
+
+    // Transform conversion data
+    const conversionData = conversionResults.map(row => {
+        const campaign = row.campaign || {};
+        const segments = row.segments || {};
+        const metrics = row.metrics || {};
+
+        return {
+            campaignId: campaign.id,
+            campaignName: campaign.name,
+            date: segments.date,
+            conversionActionName: segments.conversionActionName,
+            conversions: parseFloat(metrics.conversions) || 0,
+            conversionsValue: parseFloat(metrics.conversionsValue) || 0
+        };
+    });
+
+    return {
+        performance: performanceData,
+        conversions: conversionData
+    };
+}
+
 module.exports = {
     getConfig,
     validateConfig,
     getAccessToken,
     executeQuery,
     getCampaignPerformance,
+    getCampaignPerformanceWithConversions,
     getAdGroupPerformance,
     getAccountSummary,
     testConnection

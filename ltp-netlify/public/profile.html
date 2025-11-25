@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile Settings - LTP Reports</title>
+    <link rel="stylesheet" href="/global.css">
+    <script src="/navbar.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: var(--font-family-primary);
+            background: #f5f7fa;
+            color: #2d3748;
+        }
+        .navbar {
+            background: white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            padding: 0 2rem;
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+            height: 64px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+        }
+        .card {
+            background: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+        .card h2 {
+            margin-bottom: 1.5rem;
+            font-size: 1.5rem;
+            color: #2d3748;
+        }
+        .profile-picture-section {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+        .profile-picture-preview {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+        .profile-picture-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .profile-picture-placeholder {
+            font-size: 3rem;
+            color: #a0aec0;
+        }
+        .upload-controls {
+            flex: 1;
+        }
+        .btn {
+            padding: 0.625rem 1.25rem;
+            border-radius: 0.375rem;
+            border: none;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: inline-block;
+        }
+        .btn-primary {
+            background: #4299e1;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #3182ce;
+        }
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #2d3748;
+            margin-left: 0.5rem;
+        }
+        .btn-secondary:hover {
+            background: #cbd5e0;
+        }
+        .file-input {
+            display: none;
+        }
+        .help-text {
+            font-size: 0.875rem;
+            color: #718096;
+            margin-top: 0.5rem;
+        }
+        .message {
+            padding: 1rem;
+            border-radius: 0.375rem;
+            margin-bottom: 1rem;
+            font-size: 0.875rem;
+        }
+        .message.success {
+            background: #c6f6d5;
+            color: #276749;
+        }
+        .message.error {
+            background: #fed7d7;
+            color: #c53030;
+        }
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            color: #718096;
+        }
+        .spinner {
+            border: 4px solid #f3f4f6;
+            border-top: 4px solid #4299e1;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .info-section {
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid #e2e8f0;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #f7fafc;
+        }
+        .info-label {
+            font-weight: 500;
+            color: #4a5568;
+        }
+        .info-value {
+            color: #2d3748;
+        }
+    </style>
+</head>
+<body>
+    <div id="navbar-container"></div>
+
+    <div class="container">
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <p>Loading profile...</p>
+        </div>
+
+        <div id="content" style="display: none;">
+            <div class="card">
+                <h2>Profile Settings</h2>
+
+                <div id="message"></div>
+
+                <div class="profile-picture-section">
+                    <div class="profile-picture-preview" id="profilePicturePreview">
+                        <div class="profile-picture-placeholder" id="placeholder">👤</div>
+                        <img id="profilePicture" style="display: none;" alt="Profile">
+                    </div>
+                    <div class="upload-controls">
+                        <h3 style="margin-bottom: 0.5rem;">Profile Picture</h3>
+                        <p class="help-text" style="margin-bottom: 1rem;">JPG, PNG or GIF. Max size 2MB.</p>
+                        <input type="file" id="fileInput" class="file-input" accept="image/*">
+                        <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">
+                            Upload Photo
+                        </button>
+                        <button class="btn btn-secondary" onclick="removeProfilePicture()" id="removeBtn" style="display: none;">
+                            Remove
+                        </button>
+                    </div>
+                </div>
+
+                <div class="info-section">
+                    <h3 style="margin-bottom: 1rem;">Account Information</h3>
+                    <div class="info-row">
+                        <span class="info-label">Email</span>
+                        <span class="info-value" id="userEmail">—</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Student ID</span>
+                        <span class="info-value" id="studentId">—</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Role</span>
+                        <span class="info-value" id="userRole">—</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentUser = null;
+        let currentStudent = null;
+
+        async function checkAuth() {
+            const token = localStorage.getItem('auth_token');
+
+            if (!token) {
+                window.location.href = '/login.html';
+                return;
+            }
+
+            try {
+                const response = await fetch('/.netlify/functions/auth-me', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Not authenticated');
+                }
+
+                const data = await response.json();
+
+                if (!data.authenticated) {
+                    throw new Error('Not authenticated');
+                }
+
+                currentUser = data.user;
+
+                // Render navbar
+                const navbarContainer = document.getElementById('navbar-container');
+                navbarContainer.innerHTML = getNavbarHTML(data.user);
+
+                // Load student profile
+                await loadProfile();
+            } catch (err) {
+                console.error('Auth check failed:', err);
+                localStorage.removeItem('auth_token');
+                localStorage.removeItem('user');
+                window.location.href = '/login.html';
+            }
+        }
+
+        async function loadProfile() {
+            try {
+                console.log('[Profile Load] Loading profile for studentId:', currentUser.studentId);
+                const token = localStorage.getItem('auth_token');
+
+                // Get student data from MongoDB
+                const response = await fetch(`/.netlify/functions/student-info?studentId=${currentUser.studentId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                console.log('[Profile Load] Student info response status:', response.status);
+
+                if (response.ok) {
+                    currentStudent = await response.json();
+                    console.log('[Profile Load] Student data:', {
+                        studentId: currentStudent.studentId,
+                        hasProfilePic: !!currentStudent.profilePictureUrl,
+                        profilePicLength: currentStudent.profilePictureUrl?.length || 0
+                    });
+
+                    // Update profile picture
+                    if (currentStudent.profilePictureUrl) {
+                        console.log('[Profile Load] Setting profile picture');
+                        document.getElementById('profilePicture').src = currentStudent.profilePictureUrl;
+                        document.getElementById('profilePicture').style.display = 'block';
+                        document.getElementById('placeholder').style.display = 'none';
+                        document.getElementById('removeBtn').style.display = 'inline-block';
+                    } else {
+                        console.log('[Profile Load] No profile picture found');
+                    }
+                } else {
+                    console.warn('[Profile Load] Student info request failed:', await response.text());
+                }
+
+                // Update account info
+                document.getElementById('userEmail').textContent = currentUser.email;
+                document.getElementById('studentId').textContent = currentUser.studentId || '—';
+                document.getElementById('userRole').textContent = currentUser.role;
+
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('content').style.display = 'block';
+            } catch (err) {
+                console.error('[Profile Load] Error loading profile:', err);
+                showMessage('Error loading profile: ' + err.message, 'error');
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('content').style.display = 'block';
+            }
+        }
+
+        // Handle file upload
+        document.getElementById('fileInput').addEventListener('change', async (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            console.log('[Profile Upload] File selected:', file.name, file.type, file.size);
+
+            // Validate file type
+            if (!file.type.startsWith('image/')) {
+                showMessage('Please select an image file', 'error');
+                return;
+            }
+
+            // Validate file size (2MB)
+            if (file.size > 2 * 1024 * 1024) {
+                showMessage('Image too large. Maximum size is 2MB', 'error');
+                return;
+            }
+
+            showMessage('Uploading...', 'success');
+
+            try {
+                // Convert to base64
+                const reader = new FileReader();
+                reader.onload = async (e) => {
+                    const imageData = e.target.result;
+                    console.log('[Profile Upload] Image converted to base64, length:', imageData.length);
+                    console.log('[Profile Upload] StudentId:', currentUser.studentId);
+
+                    // Upload to server
+                    const token = localStorage.getItem('auth_token');
+                    console.log('[Profile Upload] Sending request to server...');
+
+                    const response = await fetch('/.netlify/functions/profile-picture-upload', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            imageData,
+                            studentId: currentUser.studentId
+                        })
+                    });
+
+                    console.log('[Profile Upload] Response status:', response.status);
+                    const data = await response.json();
+                    console.log('[Profile Upload] Response data:', data);
+
+                    if (!response.ok) {
+                        throw new Error(data.error || 'Upload failed');
+                    }
+
+                    // Update preview
+                    document.getElementById('profilePicture').src = imageData;
+                    document.getElementById('profilePicture').style.display = 'block';
+                    document.getElementById('placeholder').style.display = 'none';
+                    document.getElementById('removeBtn').style.display = 'inline-block';
+
+                    showMessage('Profile picture updated successfully!', 'success');
+                    console.log('[Profile Upload] Upload complete!');
+                };
+
+                reader.onerror = () => {
+                    console.error('[Profile Upload] Error reading file');
+                    showMessage('Error reading file', 'error');
+                };
+
+                reader.readAsDataURL(file);
+            } catch (err) {
+                console.error('[Profile Upload] Error:', err);
+                showMessage('Error uploading: ' + err.message, 'error');
+            }
+        });
+
+        async function removeProfilePicture() {
+            if (!confirm('Are you sure you want to remove your profile picture?')) {
+                return;
+            }
+
+            try {
+                const token = localStorage.getItem('auth_token');
+                const response = await fetch('/.netlify/functions/profile-picture-upload', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        imageData: null,
+                        studentId: currentUser.studentId
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Remove failed');
+                }
+
+                // Update preview
+                document.getElementById('profilePicture').style.display = 'none';
+                document.getElementById('placeholder').style.display = 'block';
+                document.getElementById('removeBtn').style.display = 'none';
+
+                showMessage('Profile picture removed', 'success');
+            } catch (err) {
+                showMessage('Error removing: ' + err.message, 'error');
+            }
+        }
+
+        function showMessage(text, type) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.innerHTML = `<div class="message ${type}">${text}</div>`;
+            setTimeout(() => {
+                messageDiv.innerHTML = '';
+            }, 5000);
+        }
+
+        async function handleLogout() {
+            const token = localStorage.getItem('auth_token');
+            await fetch('/.netlify/functions/auth-logout', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('user');
+            window.location.href = '/login.html';
+        }
+
+        // Check authentication on page load
+        checkAuth();
+    </script>
+</body>
+</html>

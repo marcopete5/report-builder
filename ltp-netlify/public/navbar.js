@@ -25,6 +25,7 @@ function getNavbarHTML(user) {
                 ` : ''}
                 ${isStudent ? `
                     <a href="/" class="navbar-item">📈 My Progress</a>
+                    <a href="/profile.html" class="navbar-item">⚙️ Profile</a>
                 ` : ''}
             </div>
             <div class="navbar-end">
