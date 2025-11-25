@@ -309,9 +309,6 @@
             <div class="dashboard-header">
                 <h1 class="dashboard-title">Millersville Ads Overview</h1>
                 <div style="display: flex; gap: 1rem; align-items: center;">
-                    <button id="sync-oct-btn" class="btn" style="background: #48bb78; color: white; font-weight: 600;">
-                        📥 Sync Oct 1-25
-                    </button>
                     <div class="date-selector" id="date-selector-toggle">
                     <div class="date-range" id="date-range">Oct 27 - Nov 2, 2025</div>
                     <div class="comparison" id="comparison">compared to: Oct 13 - 19, 2025</div>
@@ -1162,72 +1159,6 @@
             localStorage.removeItem('user');
             window.location.href = '/login.html';
         }
-
-        async function syncOctoberData() {
-            const btn = document.getElementById('sync-oct-btn');
-            const originalText = btn.innerHTML;
-
-            btn.disabled = true;
-            btn.innerHTML = '⏳ Syncing...';
-            btn.style.background = '#718096';
-
-            const token = localStorage.getItem('auth_token');
-
-            try {
-                const response = await fetch('/.netlify/functions/google-ads-sync-manual?startDate=2024-10-01&endDate=2024-10-25', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-
-                const responseText = await response.text();
-                let result;
-
-                try {
-                    result = JSON.parse(responseText);
-                } catch (parseErr) {
-                    console.error('Failed to parse response:', responseText);
-                    throw new Error('Server returned invalid response: ' + responseText.substring(0, 100));
-                }
-
-                if (result.success) {
-                    console.log('✅ Sync complete!');
-                    console.log('Inserted:', result.recordsInserted);
-                    console.log('Updated:', result.recordsUpdated);
-
-                    btn.innerHTML = '✅ Sync Complete!';
-                    btn.style.background = '#48bb78';
-
-                    setTimeout(() => {
-                        btn.innerHTML = originalText;
-                        btn.disabled = false;
-                        loadDashboard();
-                    }, 2000);
-
-                    alert(`Sync complete!\n\nInserted: ${result.recordsInserted} records\nUpdated: ${result.recordsUpdated} records\n\nRefreshing dashboard...`);
-                } else {
-                    throw new Error(result.error || result.message || 'Sync failed');
-                }
-            } catch (err) {
-                console.error('Sync error:', err);
-                btn.innerHTML = '❌ Sync Failed';
-                btn.style.background = '#e53e3e';
-
-                setTimeout(() => {
-                    btn.innerHTML = originalText;
-                    btn.disabled = false;
-                    btn.style.background = '#48bb78';
-                }, 3000);
-
-                alert(`Sync failed: ${err.message}\n\nCheck the console for details.`);
-            }
-        }
-
-        // Setup sync button
-        document.addEventListener('DOMContentLoaded', () => {
-            const syncBtn = document.getElementById('sync-oct-btn');
-            if (syncBtn) {
-                syncBtn.addEventListener('click', syncOctoberData);
-            }
-        });
 
         checkAuth();
     </script>
