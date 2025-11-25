@@ -214,11 +214,56 @@ function calculatePeriodMetrics(dailyData) {
 }
 
 /**
+ * Fill in missing days with zero values
+ * Ensures every day in the range is represented
+ */
+function fillMissingDays(startDate, endDate, dataArray, conversionType) {
+    const result = [];
+    const dataMap = new Map();
+
+    // Create a map of existing data by date string
+    dataArray.forEach(d => {
+        const dateStr = d.date instanceof Date ? d.date.toISOString().split('T')[0] : String(d.date).split('T')[0];
+        dataMap.set(dateStr, d);
+    });
+
+    // Generate complete date range
+    const current = new Date(startDate);
+    const end = new Date(endDate);
+
+    while (current <= end) {
+        const dateStr = current.toISOString().split('T')[0];
+        const existingData = dataMap.get(dateStr);
+
+        if (existingData) {
+            // Use existing data
+            result.push({
+                date: dateStr,
+                metric1: conversionType === 'general' ? (existingData.interviews || 0) + (existingData.contacts || 0) :
+                         conversionType === 'interviews' ? (existingData.interviews || 0) : (existingData.contacts || 0),
+                metric2: existingData.clicks || 0
+            });
+        } else {
+            // Fill with zeros for missing day
+            result.push({
+                date: dateStr,
+                metric1: 0,
+                metric2: 0
+            });
+        }
+
+        current.setDate(current.getDate() + 1);
+    }
+
+    return result;
+}
+
+/**
  * Generate metrics for a specific conversion type
  * Uses ALL campaign data for impressions/clicks/cost
  * But only counts specific conversion type for leads/CPA
  */
-function generateConversionTypeMetrics(conversionType, currentData, comparisonData) {
+function generateConversionTypeMetrics(conversionType, currentData, comparisonData, startDate, endDate, comparisonStartDate, comparisonEndDate) {
     // Calculate metrics based on conversion type
     const currentMetrics = calculateMetricsByConversionType(currentData, conversionType);
     const comparisonMetrics = calculateMetricsByConversionType(comparisonData, conversionType);
@@ -230,20 +275,9 @@ function generateConversionTypeMetrics(conversionType, currentData, comparisonDa
         cpa: calculateWoWChange(currentMetrics.cpa, comparisonMetrics.cpa)
     };
 
-    // Generate daily chart data for BOTH current and comparison periods
-    const currentDailyData = currentData.map(d => ({
-        date: d.date instanceof Date ? d.date.toISOString().split('T')[0] : String(d.date).split('T')[0],
-        metric1: conversionType === 'general' ? (d.interviews || 0) + (d.contacts || 0) :
-                 conversionType === 'interviews' ? (d.interviews || 0) : (d.contacts || 0),
-        metric2: d.clicks || 0
-    }));
-
-    const comparisonDailyData = comparisonData.map(d => ({
-        date: d.date instanceof Date ? d.date.toISOString().split('T')[0] : String(d.date).split('T')[0],
-        metric1: conversionType === 'general' ? (d.interviews || 0) + (d.contacts || 0) :
-                 conversionType === 'interviews' ? (d.interviews || 0) : (d.contacts || 0),
-        metric2: d.clicks || 0
-    }));
+    // Generate daily chart data with ALL days filled in (missing days = 0)
+    const currentDailyData = fillMissingDays(startDate, endDate, currentData, conversionType);
+    const comparisonDailyData = fillMissingDays(comparisonStartDate, comparisonEndDate, comparisonData, conversionType);
 
     return {
         current: currentMetrics,
@@ -553,11 +587,11 @@ exports.handler = async (event) => {
         // but show different conversion metrics
         const campaignBreakdown = {
             // Overall Performance: all impressions, clicks, cost, all conversions
-            general: generateConversionTypeMetrics('general', currentPeriodData, comparisonPeriodData),
+            general: generateConversionTypeMetrics('general', currentPeriodData, comparisonPeriodData, startDate, endDate, comparisonStartDate, comparisonEndDate),
             // Interviews: same impressions/clicks/cost, but only interview conversions
-            interviews: generateConversionTypeMetrics('interviews', currentPeriodData, comparisonPeriodData),
+            interviews: generateConversionTypeMetrics('interviews', currentPeriodData, comparisonPeriodData, startDate, endDate, comparisonStartDate, comparisonEndDate),
             // Contacts: same impressions/clicks/cost, but only contact conversions
-            contacts: generateConversionTypeMetrics('contacts', currentPeriodData, comparisonPeriodData)
+            contacts: generateConversionTypeMetrics('contacts', currentPeriodData, comparisonPeriodData, startDate, endDate, comparisonStartDate, comparisonEndDate)
         };
 
         // Get student metrics from database or use placeholder
