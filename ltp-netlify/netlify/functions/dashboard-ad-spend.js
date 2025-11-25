@@ -236,19 +236,36 @@ function fillMissingDays(startDate, endDate, dataArray, conversionType) {
         const existingData = dataMap.get(dateStr);
 
         if (existingData) {
-            // Use existing data
+            // Calculate leads based on conversion type
+            const leads = conversionType === 'general' ? (existingData.interviews || 0) + (existingData.contacts || 0) :
+                         conversionType === 'interviews' ? (existingData.interviews || 0) : (existingData.contacts || 0);
+
+            const clicks = existingData.clicks || 0;
+            const cost = existingData.cost || 0;
+            const impressions = existingData.impressions || 0;
+            const cvr = clicks > 0 ? ((leads / clicks) * 100) : 0;
+            const cpa = leads > 0 ? (cost / leads) : 0;
+
+            // Use existing data with all metrics
             result.push({
                 date: dateStr,
-                metric1: conversionType === 'general' ? (existingData.interviews || 0) + (existingData.contacts || 0) :
-                         conversionType === 'interviews' ? (existingData.interviews || 0) : (existingData.contacts || 0),
-                metric2: existingData.clicks || 0
+                leads,
+                cost,
+                impressions,
+                clicks,
+                cvr: parseFloat(cvr.toFixed(2)),
+                cpa: parseFloat(cpa.toFixed(2))
             });
         } else {
             // Fill with zeros for missing day
             result.push({
                 date: dateStr,
-                metric1: 0,
-                metric2: 0
+                leads: 0,
+                cost: 0,
+                impressions: 0,
+                clicks: 0,
+                cvr: 0,
+                cpa: 0
             });
         }
 

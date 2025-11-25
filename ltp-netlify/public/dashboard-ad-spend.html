@@ -221,6 +221,20 @@
         .section-metric {
             flex: 0 0 auto;
         }
+        .clickable-metric {
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 4px;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+        }
+        .clickable-metric:hover {
+            background: #f6f8fa;
+        }
+        .clickable-metric.active {
+            background: #e3f2fd;
+            border-color: #4299e1;
+        }
         .section-metric-label {
             font-size: 0.75rem;
             color: #586069;
@@ -382,6 +396,11 @@
     <script>
         let dashboardData = null;
         const charts = {};
+        const selectedMetrics = {
+            'general-chart': 'leads',
+            'interviews-chart': 'leads',
+            'contacts-chart': 'leads'
+        };
         let currentDateRange = {
             startDate: null,
             endDate: null,
@@ -796,7 +815,7 @@
             if (campaignType === 'general') {
                 // Overall Performance: Only show Cost, Leads, Total CVR, Total CPA
                 metricsHTML = `
-                    <div class="section-metric">
+                    <div class="section-metric clickable-metric" data-metric="cost" data-chart="${chartId}">
                         <div class="section-metric-label">Cost</div>
                         <div class="section-metric-value">
                             $${metrics.cost.toLocaleString()}
@@ -805,7 +824,7 @@
                             </span>
                         </div>
                     </div>
-                    <div class="section-metric">
+                    <div class="section-metric clickable-metric active" data-metric="leads" data-chart="${chartId}">
                         <div class="section-metric-label">Leads</div>
                         <div class="section-metric-value">
                             ${metrics.leads}
@@ -814,7 +833,7 @@
                             </span>
                         </div>
                     </div>
-                    <div class="section-metric">
+                    <div class="section-metric clickable-metric" data-metric="cvr" data-chart="${chartId}">
                         <div class="section-metric-label">Total CVR</div>
                         <div class="section-metric-value">
                             ${totalMetrics.cvr}%
@@ -823,7 +842,7 @@
                             </span>
                         </div>
                     </div>
-                    <div class="section-metric">
+                    <div class="section-metric clickable-metric" data-metric="cpa" data-chart="${chartId}">
                         <div class="section-metric-label">Total CPA</div>
                         <div class="section-metric-value">
                             $${totalMetrics.cpa}
@@ -836,7 +855,7 @@
             } else {
                 // Interviews/Contacts: Show section-specific CVR/CPA AND Total CVR/CPA
                 metricsHTML = `
-                    <div class="section-metric">
+                    <div class="section-metric clickable-metric" data-metric="cost" data-chart="${chartId}">
                         <div class="section-metric-label">Cost</div>
                         <div class="section-metric-value">
                             $${metrics.cost.toLocaleString()}
@@ -845,7 +864,7 @@
                             </span>
                         </div>
                     </div>
-                    <div class="section-metric">
+                    <div class="section-metric clickable-metric active" data-metric="leads" data-chart="${chartId}">
                         <div class="section-metric-label">Leads</div>
                         <div class="section-metric-value">
                             ${metrics.leads}
@@ -854,7 +873,7 @@
                             </span>
                         </div>
                     </div>
-                    <div class="section-metric">
+                    <div class="section-metric clickable-metric" data-metric="cvr" data-chart="${chartId}">
                         <div class="section-metric-label">CVR</div>
                         <div class="section-metric-value">
                             ${metrics.cvr}%
@@ -863,7 +882,7 @@
                             </span>
                         </div>
                     </div>
-                    <div class="section-metric">
+                    <div class="section-metric clickable-metric" data-metric="cpa" data-chart="${chartId}">
                         <div class="section-metric-label">CPA</div>
                         <div class="section-metric-value">
                             $${metrics.cpa}
@@ -895,6 +914,23 @@
 
             document.getElementById(metricsId).innerHTML = metricsHTML;
 
+            // Add click handlers to metrics
+            document.querySelectorAll(`[data-chart="${chartId}"]`).forEach(metric => {
+                metric.addEventListener('click', () => {
+                    const selectedMetric = metric.dataset.metric;
+
+                    // Remove active class from all metrics in this section
+                    document.querySelectorAll(`[data-chart="${chartId}"]`).forEach(m => m.classList.remove('active'));
+
+                    // Add active class to clicked metric
+                    metric.classList.add('active');
+
+                    // Update selected metric and re-render chart
+                    selectedMetrics[chartId] = selectedMetric;
+                    renderSectionChart(chartId, campaign.dailyData, campaignType);
+                });
+            });
+
             // Render chart with category-specific colors
             renderSectionChart(chartId, campaign.dailyData, campaignType);
         }
@@ -920,9 +956,12 @@
             const currentDailyData = dailyData.current || dailyData;
             const comparisonDailyData = dailyData.comparison || dailyData;
 
-            // Get metric data (assuming metric1 is the primary metric for this chart)
-            let currentData = currentDailyData.map(d => d.metric1);
-            let comparisonData = comparisonDailyData.map(d => d.metric1 || d.metric2);
+            // Get the selected metric for this chart (default to 'leads')
+            const selectedMetric = selectedMetrics[canvasId] || 'leads';
+
+            // Get metric data based on selected metric
+            let currentData = currentDailyData.map(d => d[selectedMetric] || 0);
+            let comparisonData = comparisonDailyData.map(d => d[selectedMetric] || 0);
 
             // Store original dates for tooltip
             let currentDates = currentDailyData.map(d => d.date);
