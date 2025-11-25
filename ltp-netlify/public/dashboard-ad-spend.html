@@ -1135,7 +1135,7 @@
             const token = localStorage.getItem('auth_token');
 
             try {
-                const response = await fetch('/.netlify/functions/google-ads-sync?startDate=2024-10-01&endDate=2024-10-25', {
+                const response = await fetch('/.netlify/functions/google-ads-sync-manual?startDate=2024-10-01&endDate=2024-10-25', {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
 
