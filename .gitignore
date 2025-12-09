@@ -4,3 +4,8 @@ node_modules
 .env
 .env.localclient_secret_*.json
 client_secret.json
+# Environment files
+.env.local
+.env
+.env.production
+*.env
