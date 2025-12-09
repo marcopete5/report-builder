@@ -107,10 +107,65 @@ async function createStudentPipelineIndexes(db) {
     }
 }
 
+/**
+ * Create indexes on notification_rules collection
+ * Safe to call multiple times - will not recreate existing indexes
+ * @param {Db} db - MongoDB database instance
+ */
+async function createNotificationRulesIndexes(db) {
+    try {
+        await db.collection('notification_rules').createIndexes([
+            { key: { id: 1 }, name: 'id_unique', unique: true },
+            { key: { enabled: 1 }, name: 'enabled_idx' },
+            { key: { trigger_type: 1 }, name: 'trigger_type_idx' },
+            { key: { 'condition.type': 1 }, name: 'condition_type_idx' },
+            { key: { created_at: -1 }, name: 'created_at_desc' }
+        ]);
+    } catch (e) {
+    }
+}
+
+/**
+ * Create indexes on notification_logs collection
+ * Safe to call multiple times - will not recreate existing indexes
+ * @param {Db} db - MongoDB database instance
+ */
+async function createNotificationLogsIndexes(db) {
+    try {
+        await db.collection('notification_logs').createIndexes([
+            { key: { rule_id: 1, student_id: 1 }, name: 'rule_student_idx' },
+            { key: { student_id: 1, triggered_at: -1 }, name: 'student_triggered_desc' },
+            { key: { triggered_at: -1 }, name: 'triggered_at_desc' },
+            { key: { next_eligible_at: 1 }, name: 'next_eligible_at_idx' },
+            { key: { status: 1 }, name: 'status_idx' },
+            { key: { dry_run: 1 }, name: 'dry_run_idx' }
+        ]);
+    } catch (e) {
+    }
+}
+
+/**
+ * Create indexes on email_templates collection
+ * Safe to call multiple times - will not recreate existing indexes
+ * @param {Db} db - MongoDB database instance
+ */
+async function createEmailTemplatesIndexes(db) {
+    try {
+        await db.collection('email_templates').createIndexes([
+            { key: { id: 1 }, name: 'id_unique', unique: true },
+            { key: { created_at: -1 }, name: 'created_at_desc' }
+        ]);
+    } catch (e) {
+    }
+}
+
 module.exports = {
     getDb,
     createLessonEntryIndexes,
     createStudentIndexes,
     createLessonFeedbackIndexes,
-    createStudentPipelineIndexes
+    createStudentPipelineIndexes,
+    createNotificationRulesIndexes,
+    createNotificationLogsIndexes,
+    createEmailTemplatesIndexes
 };

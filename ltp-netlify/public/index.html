@@ -263,6 +263,12 @@
                             <div style="font-weight: 600; font-size: 1.1rem; margin-bottom: 0.25rem;">Database Inspector</div>
                             <div style="color: #718096; font-size: 0.875rem;">Inspect database collections and records</div>
                         </a>
+                        <a href="/notification-admin.html" id="notification-admin-link" style="display: none; padding: 1.5rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: 1px solid #5a67d8; border-radius: 0.5rem; text-decoration: none; color: white; transition: all 0.2s; box-shadow: 0 4px 6px rgba(102, 126, 234, 0.3);" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 12px rgba(102, 126, 234, 0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 6px rgba(102, 126, 234, 0.3)'">
+                            <div style="font-size: 2rem; margin-bottom: 0.5rem;">📧</div>
+                            <div style="font-weight: 600; font-size: 1.1rem; margin-bottom: 0.25rem;">Notification System</div>
+                            <div style="opacity: 0.9; font-size: 0.875rem;">Manage automated email notifications and triggers</div>
+                            <div style="margin-top: 0.5rem; padding: 0.25rem 0.75rem; background: rgba(255,255,255,0.2); border-radius: 9999px; display: inline-block; font-size: 0.75rem; font-weight: 600; text-transform: uppercase;">Superadmin Only</div>
+                        </a>
                     </div>
                     <div style="padding: 1rem; background: #edf2f7; border-radius: 0.5rem; border: 1px solid #cbd5e0;">
                         <h3 style="margin: 0 0 0.5rem; font-size: 1rem;">Quick Actions</h3>
@@ -339,6 +345,7 @@
                 // Show superadmin actions only for superadmins
                 if (user.role === 'superadmin') {
                     superadminActions.style.display = 'block';
+                    document.getElementById('notification-admin-link').style.display = 'block';
                 }
             } else if (user.role === 'student') {
                 adminContent.style.display = 'none';

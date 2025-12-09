@@ -13,7 +13,7 @@ exports.handler = async (event) => {
         return { statusCode: 204, headers: corsHeaders, body: '' };
     }
 
-    if (event.httpMethod !== 'POST') {
+    if (event.httpMethod !== 'POST' && event.httpMethod !== 'GET') {
         return {
             statusCode: 405,
             headers: corsHeaders,
@@ -21,26 +21,34 @@ exports.handler = async (event) => {
         };
     }
 
-    // Require authentication
-    const user = getUserFromEvent(event);
-    if (!user) {
-        return {
-            statusCode: 401,
-            headers: corsHeaders,
-            body: JSON.stringify({ error: 'Authentication required' })
-        };
-    }
+    // Skip authentication for scheduled functions
+    // For manual triggers, require superadmin authentication
+    const isScheduled = event.headers['x-nf-event'] === 'schedule';
 
-    // Check if user is superadmin
-    if (user.role !== 'superadmin') {
-        return {
-            statusCode: 403,
-            headers: corsHeaders,
-            body: JSON.stringify({ error: 'Only superadmins can refresh Airtable data' })
-        };
+    if (!isScheduled) {
+        // Require authentication
+        const user = getUserFromEvent(event);
+        if (!user) {
+            return {
+                statusCode: 401,
+                headers: corsHeaders,
+                body: JSON.stringify({ error: 'Authentication required' })
+            };
+        }
+
+        // Check if user is superadmin
+        if (user.role !== 'superadmin') {
+            return {
+                statusCode: 403,
+                headers: corsHeaders,
+                body: JSON.stringify({ error: 'Only superadmins can refresh Airtable data' })
+            };
+        }
     }
 
     try {
+        console.log('[Refresh Airtable] Starting student data refresh from Airtable...');
+
         const {
             AIRTABLE_API_KEY,
             AIRTABLE_BASE_ID,
@@ -104,17 +112,58 @@ exports.handler = async (event) => {
                     const record = await airtableRes.json();
                     const fields = record.fields || {};
 
+                    // Fetch mentor details if Mentor Assigned exists
+                    let mentorName = null;
+                    let mentorEmail = null;
+                    const mentorId = Array.isArray(fields['Mentor Assigned'])
+                        ? fields['Mentor Assigned'][0]
+                        : fields['Mentor Assigned'] || null;
+
+                    if (mentorId) {
+                        try {
+                            // Fetch mentor record from Staff table in Airtable
+                            const mentorUrl = `https://api.airtable.com/v0/${encodeURIComponent(
+                                AIRTABLE_BASE_ID
+                            )}/Staff/${encodeURIComponent(mentorId)}`;
+
+                            const mentorRes = await fetch(mentorUrl, {
+                                headers: {
+                                    Authorization: `Bearer ${AIRTABLE_API_KEY}`
+                                }
+                            });
+
+                            if (mentorRes.ok) {
+                                const mentorRecord = await mentorRes.json();
+                                const firstName = mentorRecord.fields?.['First Name'] || '';
+                                const lastName = mentorRecord.fields?.['Last Name'] || '';
+                                mentorName = `${firstName} ${lastName}`.trim() || null;
+                                mentorEmail = mentorRecord.fields?.['Email'] || null;
+                            }
+                        } catch (mentorErr) {
+                            console.warn(`Failed to fetch mentor ${mentorId}:`, mentorErr.message);
+                        }
+                    }
+
+                    // Profile Picture is an attachment field - get the first image URL
+                    const profilePictureArray = fields['Profile Picture'];
+                    const profilePicture = (profilePictureArray && profilePictureArray.length > 0)
+                        ? profilePictureArray[0].url
+                        : null;
+
                     // Prepare update data
                     const updateData = {
                         studentName: fields['Student Name'] || student.studentName,
+                        email: fields['Primary Email (from Contact)'] || student.email || null,
                         course: fields['Course Subject'] || null,
                         institution: fields['Enrolling Institution'] || null,
                         courseStartDate: fields['Course Start Date'] || null,
                         courseEndDate: fields['Course End Date'] || null,
                         courseExtDate: fields['Course Ext Date'] || null,
-                        mentorId: Array.isArray(fields['Mentor Assigned'])
-                            ? fields['Mentor Assigned'][0]
-                            : fields['Mentor Assigned'] || null,
+                        currentLevel: fields['Current Level'] || null,
+                        profilePicture: profilePicture || student.profilePicture || null,
+                        mentorId,
+                        mentorName: mentorName || student.mentorName || null,
+                        mentorEmail: mentorEmail || student.mentorEmail || null,
                         lastSyncedAt: new Date()
                     };
 

@@ -473,19 +473,43 @@ exports.handler = async (event) => {
             allDaysWithSubmissions.add(dateStr);
         });
 
-        // All-time attendance percentage (based on course duration or time since first submission)
-        const firstSubmissionDate =
-            allSubmissions.length > 0
-                ? new Date(allSubmissions[allSubmissions.length - 1].createdAt)
-                : new Date();
-        const daysSinceStart = Math.max(
-            1,
-            Math.ceil(
-                (new Date() - firstSubmissionDate) / (1000 * 60 * 60 * 24)
-            )
-        );
-        const allTimeAttendancePercent =
-            (allDaysWithSubmissions.size / daysSinceStart) * 100;
+        // Get course dates (from mock data or Airtable)
+        const courseStartDate = mockData?.startDate || airtableData?.startDate;
+        const courseEndDate = mockData?.endDate || airtableData?.endDate;
+
+        // All-time attendance percentage (based on course duration)
+        let allTimeAttendancePercent = 0;
+        let totalCourseDays = 0;
+
+        if (courseStartDate && courseEndDate) {
+            const courseStart = new Date(courseStartDate);
+            const courseEnd = new Date(courseEndDate);
+            const today = new Date();
+
+            // Use the earlier of today or course end date
+            const effectiveEnd = today < courseEnd ? today : courseEnd;
+
+            // Calculate total course days from start to effective end
+            totalCourseDays = Math.ceil((effectiveEnd - courseStart) / (1000 * 60 * 60 * 24)) + 1;
+
+            // Calculate attendance percentage
+            allTimeAttendancePercent = totalCourseDays > 0
+                ? (allDaysWithSubmissions.size / totalCourseDays) * 100
+                : 0;
+        } else {
+            // Fallback: use time since first submission if no course dates
+            const firstSubmissionDate =
+                allSubmissions.length > 0
+                    ? new Date(allSubmissions[allSubmissions.length - 1].createdAt)
+                    : new Date();
+            totalCourseDays = Math.max(
+                1,
+                Math.ceil(
+                    (new Date() - firstSubmissionDate) / (1000 * 60 * 60 * 24)
+                )
+            );
+            allTimeAttendancePercent = (allDaysWithSubmissions.size / totalCourseDays) * 100;
+        }
 
         // Last 7 days attendance
         const last7DaysStart = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
@@ -542,14 +566,20 @@ exports.handler = async (event) => {
         }
 
         // Average days attended per week
-        const weeksSinceStart = Math.max(1, daysSinceStart / 7);
+        const weeksSinceStart = Math.max(1, totalCourseDays / 7);
         const avgDaysPerWeek = allDaysWithSubmissions.size / weeksSinceStart;
+
+        // Calculate current gap (days since last submission)
+        let currentGap = 0;
+        if (lastSubmission && lastSubmission.length > 0) {
+            const lastSubmissionDate = new Date(lastSubmission[0].createdAt);
+            const now = new Date();
+            currentGap = Math.floor((now - lastSubmissionDate) / (1000 * 60 * 60 * 24));
+        }
 
         // Calculate pace if we have start/end dates (from mock data or Airtable)
         let paceData = null;
         let estimatedEndDate = null;
-        const courseStartDate = mockData?.startDate || airtableData?.startDate;
-        const courseEndDate = mockData?.endDate || airtableData?.endDate;
 
         if (courseStartDate && courseEndDate) {
             const submittedLessonIds = allSubmissions.map(s => s.lessonId);
@@ -571,6 +601,80 @@ exports.handler = async (event) => {
                 estimatedEndDate = 'N/A';
             }
         }
+
+        // Calculate total time spent (capped at 2 hours) and first-time only time
+        const twoHoursMs = 2 * 60 * 60 * 1000;
+        let totalTimeSpentMs = 0;
+        let firstTimeOnlyMs = 0;
+
+        // Need to determine first vs review for each submission (same logic as in table)
+        const reversedForTime = [...submissions].reverse();
+        const seenLessonsForTime = new Set();
+        const submissionTypesForTime = new Map();
+        let lastLessonIdForTime = null;
+
+        reversedForTime.forEach(sub => {
+            if (!sub.lessonId) return;
+            const isFirstEver = !seenLessonsForTime.has(sub.lessonId);
+            const isSameAsLast = sub.lessonId === lastLessonIdForTime;
+
+            if (isFirstEver) {
+                submissionTypesForTime.set(sub.createdAt.toISOString(), 'first');
+                seenLessonsForTime.add(sub.lessonId);
+            } else if (isSameAsLast) {
+                submissionTypesForTime.set(sub.createdAt.toISOString(), 'first');
+            } else {
+                submissionTypesForTime.set(sub.createdAt.toISOString(), 'review');
+            }
+            lastLessonIdForTime = sub.lessonId;
+        });
+
+        // Calculate times (submissions are sorted newest first)
+        for (let i = 1; i < submissions.length; i++) {
+            const currentTime = new Date(submissions[i].createdAt);
+            const previousTime = new Date(submissions[i - 1].createdAt);
+            let diffMs = previousTime - currentTime;
+
+            // Cap at 2 hours
+            if (diffMs > twoHoursMs) {
+                diffMs = twoHoursMs;
+            }
+
+            totalTimeSpentMs += diffMs;
+
+            // Check if this is a first-time submission
+            const subType = submissionTypesForTime.get(submissions[i].createdAt.toISOString()) || 'first';
+            if (subType === 'first') {
+                firstTimeOnlyMs += diffMs;
+            }
+        }
+
+        // Format time helper with days/weeks support
+        const formatTimeMs = (ms) => {
+            const weeks = Math.floor(ms / (1000 * 60 * 60 * 24 * 7));
+            const days = Math.floor((ms % (1000 * 60 * 60 * 24 * 7)) / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((ms % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
+
+            if (weeks > 0) {
+                return weeks + 'w ' + days + 'd ' + hours + 'h';
+            } else if (days > 0) {
+                return days + 'd ' + hours + 'h ' + minutes + 'm';
+            } else if (hours > 0) {
+                return hours + 'h ' + minutes + 'm';
+            }
+            return minutes + 'm';
+        };
+
+        const reviewTimeMs = totalTimeSpentMs - firstTimeOnlyMs;
+        const totalTimeSpentDisplay = formatTimeMs(totalTimeSpentMs);
+        const firstTimeOnlyDisplay = formatTimeMs(firstTimeOnlyMs);
+        const reviewTimeDisplay = formatTimeMs(reviewTimeMs);
+
+        // Calculate working days (8 hours = 1 day)
+        const eightHoursMs = 8 * 60 * 60 * 1000;
+        const workingDays = totalTimeSpentMs / eightHoursMs;
+        const workingDaysDisplay = workingDays.toFixed(1) + ' days';
 
         // Render HTML page
         const html = `
@@ -974,9 +1078,6 @@ exports.handler = async (event) => {
       <button class="pill ${
           days === 30 && !isCustomRange ? 'active' : ''
       }" onclick="setDays(30)">30d</button>
-      <button class="pill ${
-          days === 'all' && !isCustomRange ? 'active' : ''
-      }" onclick="setDays('all')">All Time</button>
       <div style="border-left: 1px solid #8f97a8; height: 24px; margin: 0 4px;"></div>
       <input type="date" id="startDate" class="date-input" value="${
           startDate || ''
@@ -1020,6 +1121,22 @@ exports.handler = async (event) => {
                 lastSubmission[0]?.lessonTitle || '—'
             )}</div>
           </div>
+          <div class="stat-row" style="border-top: 2px solid #e5e7eb; margin-top: 8px; padding-top: 12px;">
+            <div class="stat-label">Total Time Spent</div>
+            <div class="stat-value">${totalTimeSpentDisplay}</div>
+          </div>
+          <div class="stat-row">
+            <div class="stat-label">First-Time Only</div>
+            <div class="stat-value">${firstTimeOnlyDisplay}</div>
+          </div>
+          <div class="stat-row">
+            <div class="stat-label">Total Review Time</div>
+            <div class="stat-value">${reviewTimeDisplay}</div>
+          </div>
+          <div class="stat-row">
+            <div class="stat-label">Working Days (8hr = 1 day)</div>
+            <div class="stat-value">${workingDaysDisplay}</div>
+          </div>
         </div>
       </div>
 
@@ -1028,9 +1145,9 @@ exports.handler = async (event) => {
         <div class="stat-grid">
           <div class="stat-row">
             <div class="stat-label">All-Time Attendance</div>
-            <div class="stat-value">${allTimeAttendancePercent.toFixed(
+            <div class="stat-value">${allDaysWithSubmissions.size} / ${totalCourseDays} days (${allTimeAttendancePercent.toFixed(
                 1
-            )}%</div>
+            )}%)</div>
           </div>
           <div class="stat-row">
             <div class="stat-label">Last 7 Days</div>
@@ -1051,6 +1168,10 @@ exports.handler = async (event) => {
           <div class="stat-row">
             <div class="stat-label">Largest Gap</div>
             <div class="stat-value">${largestGap} days</div>
+          </div>
+          <div class="stat-row">
+            <div class="stat-label">Current Gap</div>
+            <div class="stat-value">${currentGap} days</div>
           </div>
         </div>
       </div>
@@ -1101,7 +1222,27 @@ exports.handler = async (event) => {
           <div class="stat-row">
             <div class="stat-label">Pace Status</div>
             <div class="stat-value" style="color: ${paceData.paceStatus === 'ahead' ? '#10b981' : paceData.paceStatus === 'on-pace' ? '#3b82f6' : paceData.paceStatus === 'behind' ? '#ef4444' : '#9ca3af'}; font-weight: 600; text-transform: capitalize;">
-              ${paceData.paceStatus === 'dnf' ? 'DNF' : paceData.paceStatus.replace('-', ' ')}
+              ${(() => {
+                if (paceData.paceStatus === 'dnf') return 'DNF';
+                const pacePercentage = paceData.expectedStoryPoints > 0
+                  ? ((paceData.completedStoryPoints - paceData.expectedStoryPoints) / paceData.expectedStoryPoints * 100).toFixed(1)
+                  : 0;
+                const paceText = paceData.paceStatus.replace('-', ' ');
+                if (paceData.paceStatus === 'ahead') return paceText + ' (' + Math.abs(pacePercentage) + '%)';
+                if (paceData.paceStatus === 'behind') return paceText + ' (' + Math.abs(pacePercentage) + '%)';
+                return paceText + ' (' + Math.abs(pacePercentage) + '%)';
+              })()}
+              <div style="font-size: 0.875rem; font-weight: 400; color: #6b7280; text-transform: none; margin-top: 4px;">
+                ${(() => {
+                  if (paceData.paceStatus === 'dnf') return 'Did not finish by course end date';
+                  const pacePercentage = paceData.expectedStoryPoints > 0
+                    ? ((paceData.completedStoryPoints - paceData.expectedStoryPoints) / paceData.expectedStoryPoints * 100).toFixed(1)
+                    : 0;
+                  if (paceData.paceStatus === 'ahead') return Math.abs(pacePercentage) + '% ahead of expected progress';
+                  if (paceData.paceStatus === 'behind') return Math.abs(pacePercentage) + '% behind expected progress';
+                  return 'Within 5% of expected progress';
+                })()}
+              </div>
             </div>
           </div>
           <div class="stat-row">
@@ -1114,7 +1255,18 @@ exports.handler = async (event) => {
           </div>
           <div class="stat-row">
             <div class="stat-label">Estimated End Date</div>
-            <div class="stat-value">${typeof estimatedEndDate === 'string' ? estimatedEndDate : estimatedEndDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
+            <div class="stat-value">
+              ${(() => {
+                if (typeof estimatedEndDate === 'string') return estimatedEndDate;
+                const estDateStr = estimatedEndDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                const courseEnd = new Date(courseEndDate);
+                const diffMs = estimatedEndDate - courseEnd;
+                const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+                if (diffDays > 0) return estDateStr + ' (' + diffDays + ' days behind)';
+                if (diffDays < 0) return estDateStr + ' (' + Math.abs(diffDays) + ' days ahead)';
+                return estDateStr + ' (on time)';
+              })()}
+            </div>
           </div>
         </div>
       </div>` : ''}
@@ -1196,57 +1348,232 @@ exports.handler = async (event) => {
     </div>
 
     <div class="card">
-      <h2>Recent Submissions (Last ${submissions.length})</h2>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
+        <h2 style="margin: 0;">Recent Submissions (${submissions.length})</h2>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <span style="font-size: 13px; color: #6b7280;">Filter:</span>
+          <button class="pill active" id="filter-all" onclick="filterSubmissions('all')">All</button>
+          <button class="pill" id="filter-first" onclick="filterSubmissions('first')">First Time</button>
+          <button class="pill" id="filter-review" onclick="filterSubmissions('review')">Review</button>
+        </div>
+      </div>
       <div style="overflow-x: auto;">
-        <table class="submissions-table">
+        <table class="submissions-table" id="submissions-table">
           <thead>
             <tr>
-              <th>Date & Time</th>
+              <th class="sortable" data-sort="date" onclick="sortTable('date')" style="cursor: pointer;">Date & Time <span id="sort-date" class="sort-arrow"></span></th>
               <th>Lesson ID</th>
               <th>Lesson Title</th>
-              <th>Time Spent</th>
+              <th class="sortable" data-sort="timeSpent" onclick="sortTable('timeSpent')" style="cursor: pointer;">Time Spent <span id="sort-timeSpent" class="sort-arrow"></span></th>
+              <th id="total-time-header" class="sortable" data-sort="totalTime" onclick="sortTable('totalTime')" style="cursor: pointer;">Total Time <span id="sort-totalTime" class="sort-arrow"></span></th>
+              <th>Type</th>
             </tr>
           </thead>
           <tbody>
-            ${submissions
-                .map(
-                    (sub, index) => {
-                        // Calculate time spent (time from this submission to the next submission)
-                        let timeSpent = '—';
-                        if (index > 0) {
-                            const currentTime = new Date(sub.createdAt);
-                            const previousTime = new Date(submissions[index - 1].createdAt);
-                            const diffMs = previousTime - currentTime;
+            ${(() => {
+                // Determine first-time vs review submissions
+                // A submission is "review" only if they worked on a DIFFERENT lesson
+                // between the first submission and this one
+                // Iterate from oldest to newest
+                const reversedSubs = [...submissions].reverse();
+                const seenLessons = new Set();
+                const submissionTypes = new Map();
+                let lastLessonId = null;
 
-                            // Convert to human-readable format
-                            const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-                            const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+                reversedSubs.forEach(sub => {
+                    if (!sub.lessonId) return;
 
-                            if (diffHours > 0) {
-                                timeSpent = `${diffHours}h ${diffMinutes}m`;
-                            } else if (diffMinutes > 0) {
-                                timeSpent = `${diffMinutes}m`;
-                            } else {
-                                const diffSeconds = Math.floor(diffMs / 1000);
-                                timeSpent = `${diffSeconds}s`;
-                            }
+                    const isFirstEver = !seenLessons.has(sub.lessonId);
+                    const isSameAsLast = sub.lessonId === lastLessonId;
+
+                    if (isFirstEver) {
+                        // First time seeing this lesson
+                        submissionTypes.set(sub.createdAt.toISOString(), 'first');
+                        seenLessons.add(sub.lessonId);
+                    } else if (isSameAsLast) {
+                        // Same lesson as last submission - still part of first visit
+                        submissionTypes.set(sub.createdAt.toISOString(), 'first');
+                    } else {
+                        // We've seen this lesson before AND worked on something else in between
+                        submissionTypes.set(sub.createdAt.toISOString(), 'review');
+                    }
+
+                    lastLessonId = sub.lessonId;
+                });
+
+                // Calculate total time per lesson and first-time only per lesson
+                // Time is calculated the same way as the Time Spent column
+                const twoHoursCap = 2 * 60 * 60 * 1000;
+                const lessonTotalTime = new Map(); // lessonId -> total ms
+                const lessonFirstTime = new Map(); // lessonId -> first-time only ms
+                const lessonTitles = new Map(); // lessonId -> title
+
+                // Process submissions (newest first) - same logic as Time Spent column
+                for (let i = 1; i < submissions.length; i++) {
+                    const sub = submissions[i];
+                    if (!sub.lessonId) continue;
+
+                    const currentTime = new Date(sub.createdAt);
+                    const previousTime = new Date(submissions[i - 1].createdAt);
+                    let diffMs = previousTime - currentTime;
+
+                    // Cap at 2 hours
+                    if (diffMs > twoHoursCap) {
+                        diffMs = twoHoursCap;
+                    }
+
+                    // Store lesson title
+                    if (!lessonTitles.has(sub.lessonId)) {
+                        lessonTitles.set(sub.lessonId, sub.lessonTitle || sub.lessonId);
+                    }
+
+                    // Add to lesson total
+                    lessonTotalTime.set(sub.lessonId, (lessonTotalTime.get(sub.lessonId) || 0) + diffMs);
+
+                    // Add to first-time only if this is a first submission
+                    const subType = submissionTypes.get(sub.createdAt.toISOString()) || 'first';
+                    if (subType === 'first') {
+                        lessonFirstTime.set(sub.lessonId, (lessonFirstTime.get(sub.lessonId) || 0) + diffMs);
+                    }
+                }
+
+                // Store lesson stats globally for modal access
+                const lessonStatsJson = JSON.stringify({
+                    totals: Object.fromEntries(lessonTotalTime),
+                    firstTime: Object.fromEntries(lessonFirstTime),
+                    titles: Object.fromEntries(lessonTitles)
+                });
+
+                // Helper to format time
+                const formatMs = (ms) => {
+                    if (!ms || ms === 0) return '—';
+                    const hours = Math.floor(ms / (1000 * 60 * 60));
+                    const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
+                    if (hours > 0) {
+                        return hours + 'h ' + minutes + 'm';
+                    }
+                    return minutes + 'm';
+                };
+
+                return submissions.map((sub, index) => {
+                    // Calculate time spent
+                    let timeSpent = '—';
+                    let breakTimeMs = 0;
+                    const twoHoursMs = 2 * 60 * 60 * 1000;
+
+                    if (index > 0) {
+                        const currentTime = new Date(sub.createdAt);
+                        const previousTime = new Date(submissions[index - 1].createdAt);
+                        let diffMs = previousTime - currentTime;
+
+                        // Cap at 2 hours
+                        if (diffMs > twoHoursMs) {
+                            breakTimeMs = diffMs - twoHoursMs;
+                            diffMs = twoHoursMs;
                         }
 
-                        return `
-              <tr>
-                <td>${new Date(sub.createdAt).toLocaleString()}</td>
-                <td style="font-family: monospace; font-size: 12px;">${escapeHtml(
-                    sub.lessonId || '—'
-                )}</td>
-                <td>${escapeHtml(sub.lessonTitle || '—')}</td>
-                <td>${timeSpent}</td>
-              </tr>
-            `;
+                        const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+                        const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+                        if (diffHours > 0) {
+                            timeSpent = diffHours + 'h ' + diffMinutes + 'm';
+                        } else if (diffMinutes > 0) {
+                            timeSpent = diffMinutes + 'm';
+                        } else {
+                            const diffSeconds = Math.floor(diffMs / 1000);
+                            timeSpent = diffSeconds + 's';
+                        }
                     }
-                )
-                .join('')}
+
+                    const subType = submissionTypes.get(sub.createdAt.toISOString()) || 'first';
+                    const isReview = subType === 'review';
+                    const rowStyle = isReview ? 'background: #fef3c7;' : '';
+                    const typeBadge = isReview
+                        ? '<span style="background: #f59e0b; color: white; padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 600;">Review</span>'
+                        : '<span style="background: #10b981; color: white; padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 600;">First</span>';
+
+                    let rowHtml = '';
+
+                    // Add break time row BEFORE the submission if time exceeded 2 hours
+                    // (the break happened between this submission and the next one)
+                    if (breakTimeMs > 0) {
+                        const breakWeeks = Math.floor(breakTimeMs / (1000 * 60 * 60 * 24 * 7));
+                        const breakDays = Math.floor((breakTimeMs % (1000 * 60 * 60 * 24 * 7)) / (1000 * 60 * 60 * 24));
+                        const breakHours = Math.floor((breakTimeMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                        const breakMinutes = Math.floor((breakTimeMs % (1000 * 60 * 60)) / (1000 * 60));
+
+                        let breakTimeDisplay = '';
+                        if (breakWeeks > 0) {
+                            breakTimeDisplay = breakWeeks + 'w ' + breakDays + 'd ' + breakHours + 'h';
+                        } else if (breakDays > 0) {
+                            breakTimeDisplay = breakDays + 'd ' + breakHours + 'h ' + breakMinutes + 'm';
+                        } else if (breakHours > 0) {
+                            breakTimeDisplay = breakHours + 'h ' + breakMinutes + 'm';
+                        } else {
+                            breakTimeDisplay = breakMinutes + 'm';
+                        }
+
+                        rowHtml += '<tr data-type="break" style="background: #dbeafe;">' +
+                            '<td style="color: #1d4ed8; font-weight: 500;">Break Time</td>' +
+                            '<td style="background: #dbeafe;"></td>' +
+                            '<td style="background: #dbeafe;"></td>' +
+                            '<td style="color: #1d4ed8; font-weight: 600;">' + breakTimeDisplay + '</td>' +
+                            '<td style="background: #dbeafe;"></td>' +
+                            '<td><span style="background: #3b82f6; color: white; padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 600;">Break</span></td>' +
+                            '</tr>';
+                    }
+
+                    // Get lesson totals for modal
+                    const lessonTotal = lessonTotalTime.get(sub.lessonId) || 0;
+                    const lessonFirst = lessonFirstTime.get(sub.lessonId) || 0;
+                    const lessonReview = lessonTotal - lessonFirst;
+
+                    // Calculate time spent in ms for sorting (use the capped value)
+                    let timeSpentMs = 0;
+                    if (index > 0) {
+                        const currentT = new Date(sub.createdAt);
+                        const previousT = new Date(submissions[index - 1].createdAt);
+                        timeSpentMs = Math.min(previousT - currentT, twoHoursMs);
+                    }
+
+                    rowHtml += '<tr data-type="' + subType + '" data-total-time="' + formatMs(lessonTotal) + '" data-review-time="' + formatMs(lessonReview) + '" data-date="' + new Date(sub.createdAt).getTime() + '" data-time-spent-ms="' + timeSpentMs + '" data-total-time-ms="' + lessonTotal + '" data-review-time-ms="' + lessonReview + '" style="' + rowStyle + '">' +
+                        '<td>' + new Date(sub.createdAt).toLocaleString() + '</td>' +
+                        '<td style="font-family: monospace; font-size: 12px;">' + escapeHtml(sub.lessonId || '—') + '</td>' +
+                        '<td><a href="#" onclick="showLessonStats(\'' + escapeHtml(sub.lessonId || '') + '\', \'' + escapeHtml(sub.lessonTitle || '').replace(/'/g, "\\'") + '\', ' + lessonTotal + ', ' + lessonFirst + ', ' + lessonReview + '); return false;" style="color: #2563eb; text-decoration: underline; cursor: pointer;">' + escapeHtml(sub.lessonTitle || '—') + '</a></td>' +
+                        '<td>' + timeSpent + '</td>' +
+                        '<td class="total-time-cell" style="font-weight: 600;">' + formatMs(lessonTotal) + '</td>' +
+                        '<td>' + typeBadge + '</td>' +
+                        '</tr>';
+
+                    return rowHtml;
+                }).join('');
+            })()}
           </tbody>
         </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lesson Stats Modal -->
+  <div id="lesson-stats-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+    <div style="background: white; border-radius: 12px; padding: 24px; max-width: 400px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+      <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 16px;">
+        <h3 id="lesson-stats-title" style="margin: 0; font-size: 18px; color: #111;">Lesson Stats</h3>
+        <button onclick="closeLessonStats()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #666; line-height: 1;">&times;</button>
+      </div>
+      <div id="lesson-stats-id" style="font-family: monospace; font-size: 12px; color: #666; margin-bottom: 16px;"></div>
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <div style="display: flex; justify-content: space-between; padding: 12px; background: #f3f4f6; border-radius: 8px;">
+          <span style="color: #374151; font-weight: 500;">Total Time</span>
+          <span id="lesson-stats-total" style="font-weight: 700; color: #111;"></span>
+        </div>
+        <div style="display: flex; justify-content: space-between; padding: 12px; background: #d1fae5; border-radius: 8px;">
+          <span style="color: #065f46; font-weight: 500;">First-Time</span>
+          <span id="lesson-stats-first" style="font-weight: 700; color: #059669;"></span>
+        </div>
+        <div style="display: flex; justify-content: space-between; padding: 12px; background: #fef3c7; border-radius: 8px;">
+          <span style="color: #92400e; font-weight: 500;">Review Time</span>
+          <span id="lesson-stats-review" style="font-weight: 700; color: #d97706;"></span>
+        </div>
       </div>
     </div>
   </div>
@@ -1479,6 +1806,162 @@ exports.handler = async (event) => {
       url.searchParams.delete('endDate');
       url.searchParams.set('days', 'fullPeriod');
       window.location.href = url.toString();
+    }
+
+    // Lesson stats modal functions
+    function formatMsDisplay(ms) {
+      if (!ms || ms === 0) return '0m';
+      const hours = Math.floor(ms / (1000 * 60 * 60));
+      const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
+      if (hours > 0) {
+        return hours + 'h ' + minutes + 'm';
+      }
+      return minutes + 'm';
+    }
+
+    function showLessonStats(lessonId, lessonTitle, totalMs, firstMs, reviewMs) {
+      document.getElementById('lesson-stats-title').textContent = lessonTitle || 'Unknown Lesson';
+      document.getElementById('lesson-stats-id').textContent = lessonId;
+      document.getElementById('lesson-stats-total').textContent = formatMsDisplay(totalMs);
+      document.getElementById('lesson-stats-first').textContent = formatMsDisplay(firstMs);
+      document.getElementById('lesson-stats-review').textContent = formatMsDisplay(reviewMs);
+      document.getElementById('lesson-stats-modal').style.display = 'flex';
+    }
+
+    function closeLessonStats() {
+      document.getElementById('lesson-stats-modal').style.display = 'none';
+    }
+
+    // Close modal on backdrop click
+    document.getElementById('lesson-stats-modal').addEventListener('click', function(e) {
+      if (e.target === this) {
+        closeLessonStats();
+      }
+    });
+
+    // Submission filter functions
+    function filterSubmissions(type) {
+      const table = document.getElementById('submissions-table');
+      const rows = table.querySelectorAll('tbody tr');
+      const filterAll = document.getElementById('filter-all');
+      const filterFirst = document.getElementById('filter-first');
+      const filterReview = document.getElementById('filter-review');
+      const totalTimeHeader = document.getElementById('total-time-header');
+
+      // Update active button
+      filterAll.classList.remove('active');
+      filterFirst.classList.remove('active');
+      filterReview.classList.remove('active');
+
+      if (type === 'all') {
+        filterAll.classList.add('active');
+      } else if (type === 'first') {
+        filterFirst.classList.add('active');
+      } else if (type === 'review') {
+        filterReview.classList.add('active');
+      }
+
+      // Update header and cell values based on filter
+      if (type === 'review') {
+        totalTimeHeader.textContent = 'Review Time';
+      } else {
+        totalTimeHeader.textContent = 'Total Time';
+      }
+
+      // Filter rows and update Total Time column
+      rows.forEach(row => {
+        const rowType = row.getAttribute('data-type');
+        const totalTimeCell = row.querySelector('.total-time-cell');
+
+        // Update the cell value based on filter type
+        if (totalTimeCell) {
+          if (type === 'review') {
+            totalTimeCell.textContent = row.getAttribute('data-review-time') || '—';
+          } else {
+            totalTimeCell.textContent = row.getAttribute('data-total-time') || '—';
+          }
+        }
+
+        // Filter visibility
+        if (type === 'all') {
+          row.style.display = '';
+        } else if (rowType === type) {
+          row.style.display = '';
+        } else {
+          row.style.display = 'none';
+        }
+      });
+    }
+
+    // Sorting state
+    let currentSortColumn = null;
+    let currentSortDirection = 'desc'; // 'asc' or 'desc'
+
+    function sortTable(column) {
+      const table = document.getElementById('submissions-table');
+      const tbody = table.querySelector('tbody');
+      const rows = Array.from(tbody.querySelectorAll('tr'));
+
+      // Determine sort direction
+      if (currentSortColumn === column) {
+        currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
+      } else {
+        currentSortColumn = column;
+        currentSortDirection = 'desc'; // Default to descending (newest/highest first)
+      }
+
+      // Get the current filter to determine which value to use for totalTime
+      const isReviewFilter = document.getElementById('filter-review').classList.contains('active');
+
+      // Separate break rows from data rows
+      const breakRows = rows.filter(r => r.getAttribute('data-type') === 'break');
+      const dataRows = rows.filter(r => r.getAttribute('data-type') !== 'break');
+
+      // Sort data rows
+      dataRows.sort((a, b) => {
+        let aVal, bVal;
+
+        if (column === 'date') {
+          aVal = parseInt(a.getAttribute('data-date') || '0', 10);
+          bVal = parseInt(b.getAttribute('data-date') || '0', 10);
+        } else if (column === 'timeSpent') {
+          aVal = parseInt(a.getAttribute('data-time-spent-ms') || '0', 10);
+          bVal = parseInt(b.getAttribute('data-time-spent-ms') || '0', 10);
+        } else if (column === 'totalTime') {
+          // Use review time if review filter is active, otherwise use total time
+          if (isReviewFilter) {
+            aVal = parseInt(a.getAttribute('data-review-time-ms') || '0', 10);
+            bVal = parseInt(b.getAttribute('data-review-time-ms') || '0', 10);
+          } else {
+            aVal = parseInt(a.getAttribute('data-total-time-ms') || '0', 10);
+            bVal = parseInt(b.getAttribute('data-total-time-ms') || '0', 10);
+          }
+        }
+
+        if (currentSortDirection === 'asc') {
+          return aVal - bVal;
+        } else {
+          return bVal - aVal;
+        }
+      });
+
+      // Clear tbody
+      tbody.innerHTML = '';
+
+      // Re-add rows (without break rows for now - they only make sense in date order)
+      dataRows.forEach(row => {
+        tbody.appendChild(row);
+      });
+
+      // Update sort arrows
+      document.querySelectorAll('.sort-arrow').forEach(arrow => {
+        arrow.textContent = '';
+      });
+
+      const arrowSpan = document.getElementById('sort-' + column);
+      if (arrowSpan) {
+        arrowSpan.textContent = currentSortDirection === 'asc' ? ' ▲' : ' ▼';
+      }
     }
   </script>
 </body>

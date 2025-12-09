@@ -6,19 +6,22 @@ const { getDb, createStudentIndexes } = require('./utils/database');
 const { getCorsHeaders } = require('./utils/cors');
 
 exports.handler = async (event) => {
+    const corsHeaders = getCorsHeaders('GET,POST,OPTIONS');
+
     if (event.httpMethod === 'OPTIONS') {
-        return { statusCode: 204, headers: getCorsHeaders('POST,OPTIONS'), body: '' };
+        return { statusCode: 204, headers: corsHeaders, body: '' };
     }
 
-    if (event.httpMethod !== 'POST') {
+    if (event.httpMethod !== 'POST' && event.httpMethod !== 'GET') {
         return {
             statusCode: 405,
-            headers: getCorsHeaders('POST,OPTIONS'),
+            headers: corsHeaders,
             body: JSON.stringify({ error: 'Method not allowed' })
         };
     }
 
     try {
+        console.log('[Sync Students] Starting student sync from lesson_entries...');
         const db = await getDb();
         await createStudentIndexes(db);
 
@@ -59,7 +62,7 @@ exports.handler = async (event) => {
         if (missingStudents.length === 0) {
             return {
                 statusCode: 200,
-                headers: { ...getCorsHeaders('POST,OPTIONS'), 'Content-Type': 'application/json' },
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     message: 'All students are already synced',
                     totalStudentsInEntries: studentsFromEntries.length,
@@ -145,9 +148,17 @@ exports.handler = async (event) => {
             }
         }
 
+        console.log('[Sync Students] Sync completed', {
+            totalStudentsInEntries: studentsFromEntries.length,
+            totalStudentsInCollection: existingStudentIds.size,
+            missing: missingStudents.length,
+            synced: syncedStudents.length,
+            failed: failedStudents.length
+        });
+
         return {
             statusCode: 200,
-            headers: { ...getCorsHeaders('POST,OPTIONS'), 'Content-Type': 'application/json' },
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 message: 'Student sync completed',
                 totalStudentsInEntries: studentsFromEntries.length,
@@ -160,9 +171,10 @@ exports.handler = async (event) => {
             })
         };
     } catch (err) {
+        console.error('[Sync Students] Fatal error:', err);
         return {
             statusCode: 500,
-            headers: getCorsHeaders('POST,OPTIONS'),
+            headers: corsHeaders,
             body: JSON.stringify({ error: 'Server error', details: err.message })
         };
     }

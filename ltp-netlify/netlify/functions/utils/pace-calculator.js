@@ -77,15 +77,15 @@ function calculatePace({ courseLessons, submittedLessonIds, courseStartDate, cou
     const originalRequiredPace = totalCourseDays > 0 ? totalStoryPoints / totalCourseDays : 0;
     const expectedStoryPoints = originalRequiredPace * daysElapsed;
 
-    // Determine pace status
+    // Determine pace status (5% tolerance)
     let paceStatus = 'on-pace';
     if (isPastEndDate && completedStoryPoints < totalStoryPoints) {
         paceStatus = 'dnf';
     } else if (expectedStoryPoints > 0) {
         const pacePercentage = ((completedStoryPoints - expectedStoryPoints) / expectedStoryPoints) * 100;
-        if (pacePercentage > 10) {
+        if (pacePercentage > 5) {
             paceStatus = 'ahead';
-        } else if (pacePercentage < -10) {
+        } else if (pacePercentage < -5) {
             paceStatus = 'behind';
         }
     }
@@ -97,6 +97,7 @@ function calculatePace({ courseLessons, submittedLessonIds, courseStartDate, cou
         daysRemaining,
         isPastEndDate,
         completedStoryPoints,
+        expectedStoryPoints,
         totalStoryPoints,
         remainingStoryPoints
     };

@@ -28,3 +28,13 @@
 # Admissions Airtable sync - runs daily at 3 AM UTC
 [functions."sync-admissions-airtable"]
   schedule = "0 3 * * *"
+
+# Student sync from lesson entries - runs daily at 3:30 AM UTC
+# Creates student records for new students who have submitted work
+[functions."sync-students"]
+  schedule = "30 3 * * *"
+
+# Student data refresh from Airtable - runs daily at 4 AM UTC
+# Updates Education Dashboard, Weekly Report, Student Detail pages
+[functions."refresh-airtable"]
+  schedule = "0 4 * * *"

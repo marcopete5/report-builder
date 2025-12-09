@@ -17,19 +17,60 @@ function toCsv(rows) {
         'entries',
         'activeDays',
         'lastSeen',
-        'lastLessonId',
-        'lastLessonTitle'
+        'estimatedEndDate'
     ];
     const out = [header.join(',')];
     for (const r of rows) {
+        // Format attendance as x/y days (z%)
+        const attendanceDisplay = r.totalCourseDays > 0
+            ? (r.activeDays ?? 0) + ' / ' + r.totalCourseDays + ' days (' + (r.attendancePercent || '0.0') + '%)'
+            : String(r.activeDays ?? 0);
+
+        // Format last seen as time ago (hours or days)
+        let lastSeenDisplay = '';
+        if (r.lastSeen) {
+            const lastSeenDate = new Date(r.lastSeen);
+            const now = new Date();
+            const diffMs = now - lastSeenDate;
+            const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+            const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+            if (diffHours < 24) {
+                lastSeenDisplay = diffHours + 'h ago';
+            } else {
+                lastSeenDisplay = diffDays + 'd ago';
+            }
+        }
+
+        // Format estimated end date as "Month Day, Year (X days ahead/behind)"
+        let estimatedEndDisplay = '—';
+        if (r.estimatedEndDate === 'Complete') {
+            estimatedEndDisplay = 'Complete';
+        } else if (r.estimatedEndDate && r.courseEndDate) {
+            const estDate = new Date(r.estimatedEndDate);
+            const courseEnd = new Date(r.courseEndDate);
+            const diffMs = estDate - courseEnd;
+            const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+
+            const options = { month: 'short', day: 'numeric', year: 'numeric' };
+            const dateStr = estDate.toLocaleDateString('en-US', options);
+
+            if (diffDays > 0) {
+                estimatedEndDisplay = dateStr + ' (' + diffDays + ' days behind)';
+            } else if (diffDays < 0) {
+                estimatedEndDisplay = dateStr + ' (' + Math.abs(diffDays) + ' days ahead)';
+            } else {
+                estimatedEndDisplay = dateStr + ' (on time)';
+            }
+        }
+
         const vals = [
             (r.studentName ?? '').replaceAll('"', '""'),
             (r.studentId ?? '').replaceAll('"', '""'),
             String(r.entries ?? 0),
-            String(r.activeDays ?? 0),
-            r.lastSeen ? new Date(r.lastSeen).toISOString() : '',
-            (r.lastLessonId ?? '').replaceAll('"', '""'),
-            (r.lastLessonTitle ?? '').replaceAll('"', '""')
+            attendanceDisplay.replaceAll('"', '""'),
+            lastSeenDisplay.replaceAll('"', '""'),
+            estimatedEndDisplay.replaceAll('"', '""')
         ].map((v) => `"${v}"`);
         out.push(vals.join(','));
     }
@@ -230,11 +271,28 @@ exports.handler = async (event) => {
         let rows = allStudents.map((student) => {
             const activity = activityMap.get(student.studentId);
 
+            // Calculate total course days for attendance percentage
+            let totalCourseDays = 0;
+            let attendancePercent = 0;
+            if (student.courseStartDate && student.courseEndDate) {
+                const courseStart = new Date(student.courseStartDate);
+                const courseEnd = new Date(student.courseEndDate);
+                const today = new Date();
+                const effectiveEnd = today < courseEnd ? today : courseEnd;
+                totalCourseDays = Math.ceil((effectiveEnd - courseStart) / (1000 * 60 * 60 * 24)) + 1;
+
+                if (activity && totalCourseDays > 0) {
+                    attendancePercent = ((activity.activeDays / totalCourseDays) * 100).toFixed(1);
+                }
+            }
+
             if (activity) {
                 // Student has activity in the selected range
                 return {
                     ...activity,
-                    studentName: student.studentName || activity.studentName
+                    studentName: student.studentName || activity.studentName,
+                    totalCourseDays,
+                    attendancePercent
                 };
             } else {
                 // Student has no activity in the selected range
@@ -246,7 +304,9 @@ exports.handler = async (event) => {
                     activeDays: 0,
                     lastSeen: lastSub?.createdAt || null,
                     lastLessonId: lastSub?.lessonId || null,
-                    lastLessonTitle: lastSub?.lessonTitle || null
+                    lastLessonTitle: lastSub?.lessonTitle || null,
+                    totalCourseDays,
+                    attendancePercent
                 };
             }
         });
@@ -272,6 +332,20 @@ exports.handler = async (event) => {
                     { sort: { createdAt: -1 } }
                 );
 
+                // Get student data for course dates
+                const studentDoc = await studentsColl.findOne({ studentId });
+
+                // Calculate total course days for attendance
+                let totalCourseDays = 0;
+                let attendancePercent = 0;
+                if (studentDoc?.courseStartDate && studentDoc?.courseEndDate) {
+                    const courseStart = new Date(studentDoc.courseStartDate);
+                    const courseEnd = new Date(studentDoc.courseEndDate);
+                    const today = new Date();
+                    const effectiveEnd = today < courseEnd ? today : courseEnd;
+                    totalCourseDays = Math.ceil((effectiveEnd - courseStart) / (1000 * 60 * 60 * 24)) + 1;
+                }
+
                 if (lastSub) {
                     inactiveStudents.push({
                         studentId: studentId,
@@ -280,7 +354,9 @@ exports.handler = async (event) => {
                         activeDays: 0,
                         lastSeen: lastSub.createdAt,
                         lastLessonId: lastSub.lessonId,
-                        lastLessonTitle: lastSub.lessonTitle
+                        lastLessonTitle: lastSub.lessonTitle,
+                        totalCourseDays,
+                        attendancePercent
                     });
                 }
             }
@@ -479,9 +555,25 @@ exports.handler = async (event) => {
 
                 row.pace = pace.requiredDailyPace;
                 row.paceStatus = pace.paceStatus;
+
+                // Calculate estimated end date
+                if (pace.actualDailyPace > 0 && pace.remainingStoryPoints > 0) {
+                    const daysNeeded = Math.ceil(pace.remainingStoryPoints / pace.actualDailyPace);
+                    const today = new Date();
+                    row.estimatedEndDate = new Date(today.getTime() + daysNeeded * 24 * 60 * 60 * 1000);
+                    row.courseEndDate = new Date(courseEndDate);
+                } else if (pace.isPastEndDate || pace.remainingStoryPoints === 0) {
+                    row.estimatedEndDate = 'Complete';
+                    row.courseEndDate = new Date(courseEndDate);
+                } else {
+                    row.estimatedEndDate = null;
+                    row.courseEndDate = new Date(courseEndDate);
+                }
             } else {
                 row.pace = null;
                 row.paceStatus = null;
+                row.estimatedEndDate = null;
+                row.courseEndDate = null;
             }
         }
 
@@ -815,7 +907,7 @@ function renderHtml({
               <th data-k="entries">Entries</th>
               <th data-k="activeDays">Active days</th>
               <th data-k="lastSeen">Last seen</th>
-              <th data-k="lastLessonTitle">Last lesson</th>
+              <th data-k="estimatedEndDate">Estimated End</th>
               <th data-k="pace">Pace (pts/day)</th>
             </tr>
           </thead>
@@ -1041,13 +1133,57 @@ function renderHtml({
         const profilePicHtml = r.profilePictureUrl
           ? '<img src="' + r.profilePictureUrl + '" alt="' + escapeHtml(r.studentName||'') + '" class="student-profile-pic">'
           : '<div class="student-profile-placeholder">👤</div>';
+
+        // Format attendance as x/y days (z%)
+        const attendanceDisplay = r.totalCourseDays > 0
+          ? (r.activeDays ?? 0) + ' / ' + r.totalCourseDays + ' days (' + (r.attendancePercent || '0.0') + '%)'
+          : (r.activeDays ?? 0);
+
+        // Format last seen as time ago (hours or days)
+        let lastSeenDisplay = '';
+        if (r.lastSeen) {
+          const lastSeenDate = new Date(r.lastSeen);
+          const now = new Date();
+          const diffMs = now - lastSeenDate;
+          const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+          const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+          if (diffHours < 24) {
+            lastSeenDisplay = diffHours + 'h ago';
+          } else {
+            lastSeenDisplay = diffDays + 'd ago';
+          }
+        }
+
+        // Format estimated end date as "Month Day, Year (X days ahead/behind)"
+        let estimatedEndDisplay = '—';
+        if (r.estimatedEndDate === 'Complete') {
+          estimatedEndDisplay = 'Complete';
+        } else if (r.estimatedEndDate && r.courseEndDate) {
+          const estDate = new Date(r.estimatedEndDate);
+          const courseEnd = new Date(r.courseEndDate);
+          const diffMs = estDate - courseEnd;
+          const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+
+          const options = { month: 'short', day: 'numeric', year: 'numeric' };
+          const dateStr = estDate.toLocaleDateString('en-US', options);
+
+          if (diffDays > 0) {
+            estimatedEndDisplay = dateStr + ' (' + diffDays + ' days behind)';
+          } else if (diffDays < 0) {
+            estimatedEndDisplay = dateStr + ' (' + Math.abs(diffDays) + ' days ahead)';
+          } else {
+            estimatedEndDisplay = dateStr + ' (on time)';
+          }
+        }
+
         html += '<tr class="' + paceClass + '" data-id="'+(r.studentId||'')+'" data-name="'+escapeHtml(r.studentName||'')+'">'
           + '<td class="student"><div class="student-cell">' + profilePicHtml + '<span>' + escapeHtml(r.studentName||'') + '</span></div></td>'
           + '<td class="mono">' + levelDisplay + '</td>'
           + '<td class="mono">' + (r.entries ?? 0) + '</td>'
-          + '<td class="mono">' + (r.activeDays ?? 0) + '</td>'
-          + '<td class="mono">' + (r.lastSeen ? new Date(r.lastSeen).toLocaleString() : '') + '</td>'
-          + '<td>' + escapeHtml(r.lastLessonTitle||'') + '</td>'
+          + '<td class="mono">' + attendanceDisplay + '</td>'
+          + '<td class="mono">' + lastSeenDisplay + '</td>'
+          + '<td>' + estimatedEndDisplay + '</td>'
           + '<td class="mono">' + paceDisplay + '</td>'
           + '</tr>';
       }
@@ -1192,7 +1328,7 @@ function renderHtml({
           statusCard.style.border = '1px solid rgba(59,130,246,0.3)';
           statusText.style.color = '#2563eb';
           statusText.textContent = '→ On Pace';
-          statusDetail.textContent = 'Within 10% of expected progress';
+          statusDetail.textContent = 'Within 5% of expected progress';
         }
 
         // Format estimated completion date
@@ -1272,8 +1408,8 @@ function renderHtml({
         url.searchParams.set('startDate', START_DATE);
         url.searchParams.set('endDate', END_DATE);
       } else if (DAYS === 'fullPeriod') {
-        // Full period mode - use 'all' for student page
-        url.searchParams.set('days', 'all');
+        // Full period mode - pass fullPeriod to student page
+        url.searchParams.set('days', 'fullPeriod');
       } else {
         url.searchParams.set('days', DAYS);
       }
@@ -1377,16 +1513,61 @@ function renderHtml({
       doc.setFontSize(12);
       doc.text(rangeText, 14, 28);
 
-      const tableData = view.map(r => [
-        r.studentName || '(unknown)',
-        String(r.entries ?? 0),
-        String(r.activeDays ?? 0),
-        r.lastSeen ? new Date(r.lastSeen).toLocaleString() : '',
-        r.lastLessonTitle || ''
-      ]);
+      const tableData = view.map(r => {
+        // Format attendance as x/y days (z%)
+        const attendanceDisplay = r.totalCourseDays > 0
+          ? (r.activeDays ?? 0) + ' / ' + r.totalCourseDays + ' days (' + (r.attendancePercent || '0.0') + '%)'
+          : String(r.activeDays ?? 0);
+
+        // Format last seen as time ago (hours or days)
+        let lastSeenDisplay = '';
+        if (r.lastSeen) {
+          const lastSeenDate = new Date(r.lastSeen);
+          const now = new Date();
+          const diffMs = now - lastSeenDate;
+          const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+          const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+          if (diffHours < 24) {
+            lastSeenDisplay = diffHours + 'h ago';
+          } else {
+            lastSeenDisplay = diffDays + 'd ago';
+          }
+        }
+
+        // Format estimated end date as "Month Day, Year (X days ahead/behind)"
+        let estimatedEndDisplay = '—';
+        if (r.estimatedEndDate === 'Complete') {
+          estimatedEndDisplay = 'Complete';
+        } else if (r.estimatedEndDate && r.courseEndDate) {
+          const estDate = new Date(r.estimatedEndDate);
+          const courseEnd = new Date(r.courseEndDate);
+          const diffMs = estDate - courseEnd;
+          const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+
+          const options = { month: 'short', day: 'numeric', year: 'numeric' };
+          const dateStr = estDate.toLocaleDateString('en-US', options);
+
+          if (diffDays > 0) {
+            estimatedEndDisplay = dateStr + ' (' + diffDays + ' days behind)';
+          } else if (diffDays < 0) {
+            estimatedEndDisplay = dateStr + ' (' + Math.abs(diffDays) + ' days ahead)';
+          } else {
+            estimatedEndDisplay = dateStr + ' (on time)';
+          }
+        }
+
+        return [
+          r.studentName || '(unknown)',
+          String(r.entries ?? 0),
+          attendanceDisplay,
+          lastSeenDisplay,
+          estimatedEndDisplay
+        ];
+      });
 
       doc.autoTable({
-        head: [['Student', 'Entries', 'Active Days', 'Last Seen', 'Last Lesson']],
+        head: [['Student', 'Entries', 'Active Days', 'Last Seen', 'Estimated End']],
         body: tableData,
         startY: 35,
         theme: 'striped',
