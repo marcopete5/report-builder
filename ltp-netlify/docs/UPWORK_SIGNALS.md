@@ -19,7 +19,7 @@ A system for monitoring Upwork job postings in automation, web development, and 
 2. Create a new API application
 3. Set the **Callback URL** to:
    ```
-   https://vschool.io/api/upwork-oauth-callback
+   https://vschool-reports.netlify.app/api/upwork-oauth-callback
    ```
 4. Request the following scopes:
    - `entities:read` - Common Entities Read-Only
@@ -34,7 +34,7 @@ Add these variables to your Netlify site settings (Site settings > Environment v
 |----------|-------------|---------|
 | `UPWORK_CLIENT_ID` | OAuth Client ID from Upwork | `abc123...` |
 | `UPWORK_CLIENT_SECRET` | OAuth Client Secret from Upwork | `xyz789...` |
-| `UPWORK_REDIRECT_URI` | OAuth callback URL | `https://vschool.io/api/upwork-oauth-callback` |
+| `UPWORK_REDIRECT_URI` | OAuth callback URL | `https://vschool-reports.netlify.app/api/upwork-oauth-callback` |
 | `UPWORK_TOKEN_ENCRYPTION_KEY` | 64-character hex string for AES-256 encryption | (generate below) |
 
 #### Generate Encryption Key
@@ -49,13 +49,13 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 
 1. Deploy the application to Netlify
 2. Log in as an admin user
-3. Visit: `https://vschool.io/api/upwork-oauth-init`
+3. Visit: `https://vschool-reports.netlify.app/api/upwork-oauth-init`
 4. Authorize the application on Upwork
 5. You'll be redirected back with tokens automatically stored
 
 ### 4. Verify Setup
 
-1. Check the dashboard at: `https://vschool.io/dashboard-upwork.html`
+1. Check the dashboard at: `https://vschool-reports.netlify.app/dashboard-upwork.html`
 2. Status should show "Connected"
 3. Run a manual sync to verify data fetching works
 
@@ -300,23 +300,23 @@ public/
 ### Export Skills Report (CSV)
 ```bash
 curl -H "Authorization: Bearer YOUR_TOKEN" \
-  "https://vschool.io/api/api-upwork-export?type=skills&format=csv&days=30"
+  "https://vschool-reports.netlify.app/api/api-upwork-export?type=skills&format=csv&days=30"
 ```
 
 ### Get Automation Jobs (JSON)
 ```bash
 curl -H "Authorization: Bearer YOUR_TOKEN" \
-  "https://vschool.io/api/api-upwork-jobs?niche=automation&limit=50"
+  "https://vschool-reports.netlify.app/api/api-upwork-jobs?niche=automation&limit=50"
 ```
 
 ### Run Manual Sync
 ```bash
 curl -X POST -H "Authorization: Bearer YOUR_TOKEN" \
-  "https://vschool.io/api/upwork-jobs-sync-manual?niche=webdev&max_jobs=100"
+  "https://vschool-reports.netlify.app/api/upwork-jobs-sync-manual?niche=webdev&max_jobs=100"
 ```
 
 ### Get Weekly Overview
 ```bash
 curl -H "Authorization: Bearer YOUR_TOKEN" \
-  "https://vschool.io/api/api-upwork-aggregates?type=weekly&weeks=4"
+  "https://vschool-reports.netlify.app/api/api-upwork-aggregates?type=weekly&weeks=4"
 ```

@@ -27,7 +27,7 @@ function getConfig() {
     return {
         clientId: process.env.UPWORK_CLIENT_ID,
         clientSecret: process.env.UPWORK_CLIENT_SECRET,
-        redirectUri: process.env.UPWORK_REDIRECT_URI || 'https://vschool.io/api/upwork-oauth-callback',
+        redirectUri: process.env.UPWORK_REDIRECT_URI || 'https://vschool-reports.netlify.app/api/upwork-oauth-callback',
         encryptionKey: process.env.UPWORK_TOKEN_ENCRYPTION_KEY
     };
 }
