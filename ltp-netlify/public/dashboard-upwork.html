@@ -1,0 +1,1011 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upwork Signals - Job Market Intelligence</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="/navbar.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #fafbfc;
+            color: #1a1a1a;
+        }
+
+        /* Navbar styles */
+        .navbar {
+            background: white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            padding: 0 2rem;
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+            height: 64px;
+        }
+        .navbar-brand { display: flex; align-items: center; }
+        .navbar-logo { font-size: 1.5rem; font-weight: 600; color: #2d3748; text-decoration: none; }
+        .navbar-logo:hover { color: #4299e1; }
+        .navbar-menu { display: flex; align-items: center; gap: 0.5rem; flex: 1; }
+        .navbar-item { padding: 0.5rem 1rem; color: #4a5568; text-decoration: none; font-size: 0.875rem; font-weight: 500; border-radius: 0.375rem; transition: all 0.2s; }
+        .navbar-item:hover { background: #f7fafc; color: #4299e1; }
+        .navbar-end { display: flex; align-items: center; gap: 1rem; }
+        .navbar-user { color: #718096; font-size: 0.875rem; }
+        .role-badge { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
+        .role-superadmin { background: #fbd38d; color: #744210; }
+        .role-admin { background: #fed7d7; color: #c53030; }
+
+        /* Container */
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* Header */
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        .dashboard-title {
+            font-size: 1.75rem;
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+        .dashboard-subtitle {
+            color: #586069;
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        .btn {
+            padding: 0.625rem 1rem;
+            border-radius: 6px;
+            border: 1px solid #e1e4e8;
+            background: white;
+            color: #24292e;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .btn:hover {
+            background: #f6f8fa;
+            border-color: #0366d6;
+        }
+        .btn-primary {
+            background: #0366d6;
+            color: white;
+            border-color: #0366d6;
+        }
+        .btn-primary:hover {
+            background: #0256b9;
+        }
+        .btn-success {
+            background: #28a745;
+            color: white;
+            border-color: #28a745;
+        }
+        .btn-success:hover {
+            background: #22863a;
+        }
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        select.btn {
+            cursor: pointer;
+        }
+
+        /* Status banner */
+        .status-banner {
+            background: white;
+            border: 1px solid #e1e4e8;
+            border-radius: 8px;
+            padding: 1rem 1.5rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+        .status-dot.green { background: #28a745; }
+        .status-dot.yellow { background: #ffc107; }
+        .status-dot.red { background: #dc3545; }
+        .status-text {
+            font-size: 0.875rem;
+            color: #586069;
+        }
+        .status-text strong {
+            color: #24292e;
+        }
+
+        /* Stats grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        .stat-card {
+            background: white;
+            border: 1px solid #e1e4e8;
+            border-radius: 8px;
+            padding: 1.25rem;
+        }
+        .stat-label {
+            font-size: 0.75rem;
+            color: #586069;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.5rem;
+        }
+        .stat-value {
+            font-size: 1.75rem;
+            font-weight: 600;
+            color: #24292e;
+        }
+        .stat-change {
+            font-size: 0.75rem;
+            margin-top: 0.5rem;
+        }
+        .stat-change.positive { color: #28a745; }
+        .stat-change.negative { color: #dc3545; }
+
+        /* Niche tabs */
+        .niche-tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid #e1e4e8;
+            padding-bottom: 0.5rem;
+        }
+        .niche-tab {
+            padding: 0.5rem 1rem;
+            border-radius: 6px 6px 0 0;
+            background: transparent;
+            border: none;
+            color: #586069;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .niche-tab:hover {
+            color: #0366d6;
+            background: #f6f8fa;
+        }
+        .niche-tab.active {
+            color: #0366d6;
+            background: white;
+            border: 1px solid #e1e4e8;
+            border-bottom-color: white;
+            margin-bottom: -1px;
+        }
+
+        /* Card */
+        .card {
+            background: white;
+            border: 1px solid #e1e4e8;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+        .card-header {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid #e1e4e8;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .card-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #24292e;
+        }
+        .card-body {
+            padding: 1.5rem;
+        }
+
+        /* Grid layouts */
+        .two-column {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+        }
+        @media (max-width: 1024px) {
+            .two-column { grid-template-columns: 1fr; }
+        }
+
+        /* Repeated asks */
+        .ask-item {
+            padding: 1rem;
+            border: 1px solid #e1e4e8;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+        }
+        .ask-item:last-child {
+            margin-bottom: 0;
+        }
+        .ask-pattern {
+            font-weight: 600;
+            color: #24292e;
+            margin-bottom: 0.5rem;
+        }
+        .ask-count {
+            font-size: 0.875rem;
+            color: #0366d6;
+            background: #e1e4e8;
+            padding: 0.125rem 0.5rem;
+            border-radius: 9999px;
+            margin-left: 0.5rem;
+        }
+        .ask-examples {
+            font-size: 0.875rem;
+            color: #586069;
+            margin-top: 0.5rem;
+        }
+        .ask-example {
+            display: block;
+            padding: 0.25rem 0;
+            border-left: 2px solid #e1e4e8;
+            padding-left: 0.75rem;
+            margin-top: 0.5rem;
+        }
+
+        /* Skills list */
+        .skill-list {
+            list-style: none;
+        }
+        .skill-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #f6f8fa;
+        }
+        .skill-item:last-child {
+            border-bottom: none;
+        }
+        .skill-name {
+            font-size: 0.875rem;
+            color: #24292e;
+        }
+        .skill-count {
+            font-size: 0.875rem;
+            color: #586069;
+        }
+        .skill-bar {
+            flex: 1;
+            margin: 0 1rem;
+            height: 8px;
+            background: #e1e4e8;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .skill-bar-fill {
+            height: 100%;
+            background: #0366d6;
+            border-radius: 4px;
+        }
+
+        /* Budget bands */
+        .budget-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+        .budget-card {
+            padding: 1rem;
+            background: #f6f8fa;
+            border-radius: 6px;
+            text-align: center;
+        }
+        .budget-type {
+            font-size: 0.75rem;
+            color: #586069;
+            text-transform: uppercase;
+            margin-bottom: 0.5rem;
+        }
+        .budget-value {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #24292e;
+        }
+        .budget-label {
+            font-size: 0.75rem;
+            color: #586069;
+            margin-top: 0.25rem;
+        }
+
+        /* Jobs table */
+        .jobs-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .jobs-table th,
+        .jobs-table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid #e1e4e8;
+        }
+        .jobs-table th {
+            font-size: 0.75rem;
+            color: #586069;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+        .jobs-table td {
+            font-size: 0.875rem;
+        }
+        .job-title {
+            color: #0366d6;
+            font-weight: 500;
+        }
+        .job-skills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.25rem;
+        }
+        .job-skill {
+            background: #f6f8fa;
+            padding: 0.125rem 0.5rem;
+            border-radius: 3px;
+            font-size: 0.75rem;
+            color: #586069;
+        }
+
+        /* Charts */
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+
+        /* Loading state */
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 3rem;
+            color: #586069;
+        }
+        .spinner {
+            width: 24px;
+            height: 24px;
+            border: 3px solid #e1e4e8;
+            border-top-color: #0366d6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 0.75rem;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Empty state */
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #586069;
+        }
+        .empty-state h3 {
+            margin-bottom: 0.5rem;
+            color: #24292e;
+        }
+
+        /* Auth setup */
+        .auth-setup {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 8px;
+            padding: 2rem;
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+        .auth-setup h2 {
+            color: #856404;
+            margin-bottom: 1rem;
+        }
+        .auth-setup p {
+            color: #856404;
+            margin-bottom: 1.5rem;
+        }
+
+        /* Export dropdown */
+        .export-dropdown {
+            position: relative;
+        }
+        .export-menu {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: white;
+            border: 1px solid #e1e4e8;
+            border-radius: 6px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+            min-width: 200px;
+            z-index: 100;
+            display: none;
+        }
+        .export-menu.active {
+            display: block;
+        }
+        .export-menu a {
+            display: block;
+            padding: 0.75rem 1rem;
+            color: #24292e;
+            text-decoration: none;
+            font-size: 0.875rem;
+        }
+        .export-menu a:hover {
+            background: #f6f8fa;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar" id="navbar"></nav>
+
+    <div class="container">
+        <div class="dashboard-header">
+            <div>
+                <h1 class="dashboard-title">Upwork Signals</h1>
+                <p class="dashboard-subtitle">Job market intelligence for automation, web dev, and cybersecurity niches</p>
+            </div>
+            <div class="controls">
+                <select class="btn" id="niche-select">
+                    <option value="">All Niches</option>
+                    <option value="automation">Automation</option>
+                    <option value="webdev">Web Development</option>
+                    <option value="cybersecurity">Cybersecurity</option>
+                </select>
+                <button class="btn" id="refresh-btn">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
+                        <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
+                    </svg>
+                    Refresh
+                </button>
+                <div class="export-dropdown">
+                    <button class="btn" id="export-btn">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                            <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+                            <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+                        </svg>
+                        Export
+                    </button>
+                    <div class="export-menu" id="export-menu">
+                        <a href="#" data-type="jobs" data-format="json">Jobs (JSON)</a>
+                        <a href="#" data-type="jobs" data-format="csv">Jobs (CSV)</a>
+                        <a href="#" data-type="skills" data-format="csv">Skills (CSV)</a>
+                        <a href="#" data-type="patterns" data-format="csv">Patterns (CSV)</a>
+                        <a href="#" data-type="assignments" data-format="json">Assignments (JSON)</a>
+                    </div>
+                </div>
+                <button class="btn btn-primary" id="manual-sync-btn">Run Manual Sync</button>
+            </div>
+        </div>
+
+        <!-- Auth Setup Banner (shown when not authorized) -->
+        <div class="auth-setup" id="auth-setup" style="display: none;">
+            <h2>Upwork API Authorization Required</h2>
+            <p>To fetch job data, you need to connect your Upwork API credentials.</p>
+            <a href="/api/upwork-oauth-init" class="btn btn-primary">Connect Upwork Account</a>
+        </div>
+
+        <!-- Status Banner -->
+        <div class="status-banner" id="status-banner">
+            <div class="status-item">
+                <span class="status-dot" id="status-dot"></span>
+                <span class="status-text" id="status-text">Loading...</span>
+            </div>
+            <div class="status-item">
+                <span class="status-text">Last sync: <strong id="last-sync">-</strong></span>
+            </div>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="stats-grid" id="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Total Jobs (7 days)</div>
+                <div class="stat-value" id="stat-total">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Automation</div>
+                <div class="stat-value" id="stat-automation">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Web Dev</div>
+                <div class="stat-value" id="stat-webdev">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Cybersecurity</div>
+                <div class="stat-value" id="stat-cybersecurity">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Avg Fixed Budget</div>
+                <div class="stat-value" id="stat-fixed-budget">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Avg Hourly Rate</div>
+                <div class="stat-value" id="stat-hourly-rate">-</div>
+            </div>
+        </div>
+
+        <!-- Main Content Grid -->
+        <div class="two-column">
+            <!-- Repeated Asks -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Top Repeated Asks</h2>
+                </div>
+                <div class="card-body" id="repeated-asks">
+                    <div class="loading">
+                        <span class="spinner"></span>
+                        Loading...
+                    </div>
+                </div>
+            </div>
+
+            <!-- Top Skills -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Trending Skills</h2>
+                </div>
+                <div class="card-body" id="top-skills">
+                    <div class="loading">
+                        <span class="spinner"></span>
+                        Loading...
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="two-column">
+            <!-- Budget Analysis -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Budget Analysis</h2>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="budget-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Top Keywords -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Keyword Matches</h2>
+                </div>
+                <div class="card-body" id="top-keywords">
+                    <div class="loading">
+                        <span class="spinner"></span>
+                        Loading...
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Jobs -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">Recent Jobs</h2>
+            </div>
+            <div class="card-body" style="overflow-x: auto;">
+                <table class="jobs-table" id="jobs-table">
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Niche</th>
+                            <th>Budget</th>
+                            <th>Experience</th>
+                            <th>Skills</th>
+                            <th>Fetched</th>
+                        </tr>
+                    </thead>
+                    <tbody id="jobs-tbody">
+                        <tr>
+                            <td colspan="6" class="loading">
+                                <span class="spinner"></span>
+                                Loading...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize navbar
+        if (typeof initNavbar === 'function') {
+            initNavbar();
+        }
+
+        let budgetChart = null;
+        let currentNiche = '';
+
+        // Get auth token
+        function getAuthToken() {
+            const cookies = document.cookie.split(';');
+            for (const cookie of cookies) {
+                const [name, value] = cookie.trim().split('=');
+                if (name === 'auth_token') return value;
+            }
+            return null;
+        }
+
+        // Fetch with auth
+        async function fetchWithAuth(url) {
+            const token = getAuthToken();
+            if (!token) {
+                window.location.href = '/login.html';
+                return null;
+            }
+
+            const response = await fetch(url, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (response.status === 401) {
+                window.location.href = '/login.html';
+                return null;
+            }
+
+            return response.json();
+        }
+
+        // Load overview data
+        async function loadOverview() {
+            const nicheParam = currentNiche ? `?niche=${currentNiche}` : '';
+            const data = await fetchWithAuth(`/api/api-upwork-aggregates?type=overview${nicheParam ? '&niche=' + currentNiche : ''}`);
+
+            if (!data) return;
+
+            // Check auth status
+            if (data.sync_status?.token_status === 'missing') {
+                document.getElementById('auth-setup').style.display = 'block';
+                document.getElementById('status-banner').style.display = 'none';
+                return;
+            }
+
+            document.getElementById('auth-setup').style.display = 'none';
+            document.getElementById('status-banner').style.display = 'flex';
+
+            // Update status
+            const statusDot = document.getElementById('status-dot');
+            const statusText = document.getElementById('status-text');
+
+            if (data.sync_status?.token_status === 'valid') {
+                statusDot.className = 'status-dot green';
+                statusText.innerHTML = `Connected (expires in <strong>${data.sync_status.token_expires_in_hours}h</strong>)`;
+            } else if (data.sync_status?.token_status === 'expiring_soon') {
+                statusDot.className = 'status-dot yellow';
+                statusText.innerHTML = `Token expiring soon (<strong>${data.sync_status.token_expires_in_hours}h</strong>)`;
+            } else {
+                statusDot.className = 'status-dot red';
+                statusText.innerHTML = 'Connection issue';
+            }
+
+            // Last sync
+            if (data.sync_status?.last_run) {
+                const lastSync = new Date(data.sync_status.last_run);
+                document.getElementById('last-sync').textContent = lastSync.toLocaleString();
+            }
+
+            // Stats
+            document.getElementById('stat-total').textContent = data.summary?.total_jobs || 0;
+            document.getElementById('stat-automation').textContent = data.summary?.by_niche?.automation || 0;
+            document.getElementById('stat-webdev').textContent = data.summary?.by_niche?.webdev || 0;
+            document.getElementById('stat-cybersecurity').textContent = data.summary?.by_niche?.cybersecurity || 0;
+
+            const fixedBudget = data.summary?.budget?.fixed?.avg;
+            document.getElementById('stat-fixed-budget').textContent = fixedBudget ? `$${fixedBudget}` : '-';
+
+            const hourlyRate = data.summary?.budget?.hourly?.avg;
+            document.getElementById('stat-hourly-rate').textContent = hourlyRate ? `$${hourlyRate}/hr` : '-';
+
+            // Repeated asks
+            renderRepeatedAsks(data.repeated_asks);
+
+            // Top skills
+            renderSkills(data.top_skills);
+
+            // Top keywords
+            renderKeywords(data.top_keywords);
+
+            // Budget chart
+            renderBudgetChart(data.summary?.budget);
+        }
+
+        // Render repeated asks
+        function renderRepeatedAsks(repeatedAsks) {
+            const container = document.getElementById('repeated-asks');
+
+            if (!repeatedAsks || Object.keys(repeatedAsks).length === 0) {
+                container.innerHTML = '<div class="empty-state"><h3>No patterns detected yet</h3><p>Run a sync to start collecting job data</p></div>';
+                return;
+            }
+
+            let html = '';
+            for (const [niche, asks] of Object.entries(repeatedAsks)) {
+                if (currentNiche && niche !== currentNiche) continue;
+
+                for (const ask of asks) {
+                    html += `
+                        <div class="ask-item">
+                            <div class="ask-pattern">
+                                "${ask.pattern}"
+                                <span class="ask-count">${ask.count} jobs</span>
+                            </div>
+                            <div class="ask-examples">
+                                <strong>Niche:</strong> ${niche}
+                                ${ask.examples && ask.examples.length > 0 ? `
+                                    <span class="ask-example">${ask.examples.slice(0, 2).join('</span><span class="ask-example">')}</span>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+
+            container.innerHTML = html || '<div class="empty-state"><h3>No patterns found</h3></div>';
+        }
+
+        // Render skills
+        function renderSkills(skills) {
+            const container = document.getElementById('top-skills');
+
+            if (!skills || skills.length === 0) {
+                container.innerHTML = '<div class="empty-state"><h3>No skills data</h3></div>';
+                return;
+            }
+
+            const maxCount = skills[0]?.count || 1;
+            let html = '<ul class="skill-list">';
+
+            for (const skill of skills.slice(0, 10)) {
+                const pct = (skill.count / maxCount) * 100;
+                html += `
+                    <li class="skill-item">
+                        <span class="skill-name">${skill.skill}</span>
+                        <div class="skill-bar">
+                            <div class="skill-bar-fill" style="width: ${pct}%"></div>
+                        </div>
+                        <span class="skill-count">${skill.count}</span>
+                    </li>
+                `;
+            }
+
+            html += '</ul>';
+            container.innerHTML = html;
+        }
+
+        // Render keywords
+        function renderKeywords(keywords) {
+            const container = document.getElementById('top-keywords');
+
+            if (!keywords || keywords.length === 0) {
+                container.innerHTML = '<div class="empty-state"><h3>No keyword data</h3></div>';
+                return;
+            }
+
+            const maxCount = keywords[0]?.count || 1;
+            let html = '<ul class="skill-list">';
+
+            for (const kw of keywords.slice(0, 10)) {
+                const pct = (kw.count / maxCount) * 100;
+                html += `
+                    <li class="skill-item">
+                        <span class="skill-name">${kw.keyword}</span>
+                        <div class="skill-bar">
+                            <div class="skill-bar-fill" style="width: ${pct}%; background: #28a745;"></div>
+                        </div>
+                        <span class="skill-count">${kw.count}</span>
+                    </li>
+                `;
+            }
+
+            html += '</ul>';
+            container.innerHTML = html;
+        }
+
+        // Render budget chart
+        function renderBudgetChart(budget) {
+            const ctx = document.getElementById('budget-chart').getContext('2d');
+
+            if (budgetChart) {
+                budgetChart.destroy();
+            }
+
+            budgetChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Fixed Price', 'Hourly'],
+                    datasets: [{
+                        label: 'Average Budget',
+                        data: [
+                            budget?.fixed?.avg || 0,
+                            budget?.hourly?.avg || 0
+                        ],
+                        backgroundColor: ['#0366d6', '#28a745']
+                    }, {
+                        label: 'Job Count',
+                        data: [
+                            budget?.fixed?.count || 0,
+                            budget?.hourly?.count || 0
+                        ],
+                        backgroundColor: ['rgba(3, 102, 214, 0.3)', 'rgba(40, 167, 69, 0.3)']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        // Load recent jobs
+        async function loadRecentJobs() {
+            const params = new URLSearchParams({ limit: '10' });
+            if (currentNiche) params.set('niche', currentNiche);
+
+            const data = await fetchWithAuth(`/api/api-upwork-jobs?${params}`);
+
+            if (!data) return;
+
+            const tbody = document.getElementById('jobs-tbody');
+
+            if (!data.jobs || data.jobs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No jobs found</td></tr>';
+                return;
+            }
+
+            let html = '';
+            for (const job of data.jobs) {
+                const budget = job.budget_min
+                    ? `$${job.budget_min} fixed`
+                    : (job.hourly_rate_min ? `$${job.hourly_rate_min}-${job.hourly_rate_max}/hr` : '-');
+
+                const skills = (job.skills || []).slice(0, 3).map(s =>
+                    `<span class="job-skill">${s}</span>`
+                ).join('');
+
+                const fetched = job.fetched_at
+                    ? new Date(job.fetched_at).toLocaleDateString()
+                    : '-';
+
+                html += `
+                    <tr>
+                        <td><span class="job-title">${job.title}</span></td>
+                        <td>${job.niche}</td>
+                        <td>${budget}</td>
+                        <td>${job.experience_level || '-'}</td>
+                        <td><div class="job-skills">${skills}</div></td>
+                        <td>${fetched}</td>
+                    </tr>
+                `;
+            }
+
+            tbody.innerHTML = html;
+        }
+
+        // Manual sync
+        async function runManualSync() {
+            const btn = document.getElementById('manual-sync-btn');
+            btn.disabled = true;
+            btn.textContent = 'Syncing...';
+
+            try {
+                const token = getAuthToken();
+                const response = await fetch('/api/upwork-jobs-sync-manual?max_jobs=50', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert(`Sync complete! Fetched: ${data.total_fetched}, Matched: ${data.total_matched}, Stored: ${data.total_stored}`);
+                    loadOverview();
+                    loadRecentJobs();
+                } else {
+                    alert('Sync failed: ' + (data.error || 'Unknown error'));
+                }
+            } catch (err) {
+                alert('Sync error: ' + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Run Manual Sync';
+            }
+        }
+
+        // Export handler
+        function handleExport(type, format) {
+            const token = getAuthToken();
+            const params = new URLSearchParams({
+                type,
+                format,
+                days: '7'
+            });
+            if (currentNiche) params.set('niche', currentNiche);
+
+            window.open(`/api/api-upwork-export?${params}`, '_blank');
+        }
+
+        // Event listeners
+        document.getElementById('niche-select').addEventListener('change', (e) => {
+            currentNiche = e.target.value;
+            loadOverview();
+            loadRecentJobs();
+        });
+
+        document.getElementById('refresh-btn').addEventListener('click', () => {
+            loadOverview();
+            loadRecentJobs();
+        });
+
+        document.getElementById('manual-sync-btn').addEventListener('click', runManualSync);
+
+        document.getElementById('export-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            document.getElementById('export-menu').classList.toggle('active');
+        });
+
+        document.querySelectorAll('#export-menu a').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const type = e.target.dataset.type;
+                const format = e.target.dataset.format;
+                handleExport(type, format);
+                document.getElementById('export-menu').classList.remove('active');
+            });
+        });
+
+        document.addEventListener('click', () => {
+            document.getElementById('export-menu').classList.remove('active');
+        });
+
+        // Initial load
+        loadOverview();
+        loadRecentJobs();
+    </script>
+</body>
+</html>

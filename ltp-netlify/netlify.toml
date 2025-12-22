@@ -38,3 +38,18 @@
 # Updates Education Dashboard, Weekly Report, Student Detail pages
 [functions."refresh-airtable"]
   schedule = "0 4 * * *"
+
+# Upwork job postings sync - runs daily at 5 AM UTC
+# Fetches job postings from Upwork API for automation, webdev, and cybersecurity niches
+[functions."upwork-jobs-sync"]
+  schedule = "0 5 * * *"
+
+# Upwork daily aggregation - runs daily at 5:30 AM UTC
+# Calculates daily statistics (skills, budgets, keywords) from job data
+[functions."upwork-aggregate-daily"]
+  schedule = "30 5 * * *"
+
+# Upwork weekly aggregation - runs Sundays at 6 AM UTC
+# Calculates weekly trends, n-grams, and repeated asks
+[functions."upwork-aggregate-weekly"]
+  schedule = "0 6 * * 0"
